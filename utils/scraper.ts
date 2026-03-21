@@ -92,7 +92,9 @@ export const getScraperClient = (
       const p = pagination || { start: 0, num: PAGE_SIZE };
       client = axiosClient.get(`https://www.google.com/search?num=${p.num}&start=${p.start}&q=${encodeURI(keyword.keyword)}`);
    } else {
-      client = fetch(apiURL, { method: 'GET', headers });
+      const method = scraper?.requestMethod ? scraper.requestMethod(keyword, settings) : 'GET';
+      const body = method === 'POST' && scraper?.requestBody ? scraper.requestBody(keyword, settings, countries, pagination) : undefined;
+      client = fetch(apiURL, { method, headers, body });
    }
 
    return client;
