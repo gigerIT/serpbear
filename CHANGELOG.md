@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.0.3](https://github.com/gigerIT/serpbear/compare/serpbear-v3.0.2...serpbear-v3.0.3) (2026-03-24)
+
+
+### Bug Fixes
+
+* check releases from fork repo ([ae19978](https://github.com/gigerIT/serpbear/commit/ae19978add7b2db69e024821e5ce653c23e0e811))
+* resolve Google Ads OAuth callback URL behind proxies ([9f0ddec](https://github.com/gigerIT/serpbear/commit/9f0ddecc85865895d421c2a96e65db7c9c7dde62))
+* restore changelog cleanup and lint compliance ([5b9a76e](https://github.com/gigerIT/serpbear/commit/5b9a76e92ccb8bff7a080f640a7d278c251c9749))
+
 ### [3.0.2](https://github-gigerit/gigerIT/serpbear/compare/v3.0.1...v3.0.2) (2026-03-24)
 
 ### Bug Fixes
