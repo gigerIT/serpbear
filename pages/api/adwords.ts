@@ -5,6 +5,7 @@ import Cryptr from 'cryptr';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../utils/adwords';
+import getGoogleAdsRedirectURL from '../../utils/getGoogleAdsRedirectURL';
 
 type adwordsValidateResp = {
    valid: boolean
@@ -35,18 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<string>) => {
    try {
       const code = (req.query.code as string);
-      // Build redirect URL using NEXT_PUBLIC_APP_URL (most reliable behind reverse proxies),
-      // falling back to X-Forwarded-* headers, then req.headers.host.
-      let redirectURL = '';
-      if (process.env.NEXT_PUBLIC_APP_URL) {
-         redirectURL = `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/api/adwords`;
-      } else {
-         const fwdProto = req.headers['x-forwarded-proto'] as string | undefined;
-         const fwdHost = req.headers['x-forwarded-host'] as string | undefined;
-         const proto = fwdProto || (req.headers.host?.includes('localhost:') ? 'http' : 'https');
-         const host = fwdHost || req.headers.host;
-         redirectURL = `${proto}://${host}/api/adwords`;
-      }
+      const redirectURL = getGoogleAdsRedirectURL(req);
 
       if (code) {
          try {
@@ -64,12 +54,11 @@ const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<
             }
             return res.status(400).send('Error Getting the Google Ads Refresh Token. Please Try Again!');
          } catch (error:any) {
-            let errorMsg = error?.response?.data?.error;
-            if (errorMsg.includes('redirect_uri_mismatch')) {
-               errorMsg += ` Redirected URL: ${redirectURL}`;
-            }
-            console.log('[Error] Getting Google Ads Refresh Token! Reason: ', errorMsg);
-            return res.status(400).send(`Error Saving the Google Ads Refresh Token ${errorMsg ? `. Details: ${errorMsg}` : ''}. Please Try Again!`);
+            const errorMsg = typeof error?.response?.data?.error === 'string' ? error.response.data.error : '';
+            const errorDetails = errorMsg ? `. Details: ${errorMsg}` : '';
+            const mismatchDetails = errorMsg.includes('redirect_uri_mismatch') ? ` Redirected URL: ${redirectURL}` : '';
+            console.log('[Error] Getting Google Ads Refresh Token! Reason: ', `${errorMsg}${mismatchDetails}`);
+            return res.status(400).send(`Error Saving the Google Ads Refresh Token${errorDetails}${mismatchDetails}. Please Try Again!`);
          }
       } else {
          return res.status(400).send('No Code Provided By Google. Please Try Again!');
@@ -99,7 +88,12 @@ const validateAdwordsIntegration = async (req: NextApiRequest, res: NextApiRespo
       // Make a test Request to Google Ads
       const adwordsCreds = await getAdwordsCredentials();
       const { client_id, client_secret, refresh_token } = adwordsCreds || {};
-      if (adwordsCreds && client_id && client_secret && developer_token && account_id && refresh_token) {
+      if (adwordsCreds
+         && client_id
+         && client_secret
+         && developer_token
+         && account_id
+         && refresh_token) {
          const keywords = await getAdwordsKeywordIdeas(
             adwordsCreds,
             { country: 'US', language: '1000', keywords: ['compress'], seedType: 'custom' },
