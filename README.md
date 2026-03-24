@@ -2,11 +2,17 @@
 
 # SerpBear
 
-![Codacy Badge](https://app.codacy.com/project/badge/Grade/7e7a0030c3f84c6fb56a3ce6273fbc1d) ![GitHub](https://img.shields.io/github/license/towfiqi/serpbear) ![GitHub package.json version](https://img.shields.io/github/package-json/v/towfiqi/serpbear) ![Docker Pulls](https://img.shields.io/docker/pulls/towfiqi/serpbear) [![StandWithPalestine](https://raw.githubusercontent.com/Safouene1/support-palestine-banner/master/StandWithPalestine.svg)](https://www.youtube.com/watch?v=bjtDsd0g468&rco=1)
+![Codacy Badge](https://app.codacy.com/project/badge/Grade/7e7a0030c3f84c6fb56a3ce6273fbc1d) ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear) [![StandWithPalestine](https://raw.githubusercontent.com/Safouene1/support-palestine-banner/master/StandWithPalestine.svg)](https://www.youtube.com/watch?v=bjtDsd0g468&rco=1)
 
-#### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/towfiqi/serpbear/blob/main/CHANGELOG.md) | [Docker Image](https://hub.docker.com/r/towfiqi/serpbear)
+#### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Fork Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
 
 SerpBear is an Open Source Search Engine Position Tracking and Keyword Research App. It allows you to track your website's keyword positions in Google and get notified of their position change.
+
+#### This Fork
+
+This repository is a maintained fork of the original [SerpBear](https://github.com/towfiqi/serpbear). We rely on SerpBear for client projects, so we are committed to keeping this fork current, stable, and actively improved.
+
+This is not meant as criticism of the original maintainer. Open source maintainers often have limited time and more important priorities. We appreciate the original project and the work behind it. Our goal with this fork is to keep shipping bug fixes, compatibility updates, and new features for teams that depend on SerpBear in production.
 
 ![Easy to Use Search Engine Rank Tracker](https://serpbear.b-cdn.net/serpbear_readme_v2.gif)
 
@@ -28,9 +34,54 @@ The Keyword Research and keyword generation feature works by integrating your Go
 
 When you [integrate Google Search Console](https://docs.serpbear.com/miscellaneous/integrate-google-search-console), the app shows actual search visits for each tracked keywords. You can also discover new keywords, and find the most performing keywords, countries, pages.you will be able to view the actual visits count from Google Search for the tracked keywords.
 
+#### Install
+
+The easiest way to run this fork is with our Docker image on Docker Hub: [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
+
+Use `latest` for the newest stable fork release, or pin a version tag for predictable deployments.
+
+```bash
+docker pull gigeritch/serpbear:latest
+docker run -d \
+  --name serpbear \
+  -p 3000:3000 \
+  -v serpbear_data:/app/data \
+  -e USER=admin \
+  -e PASSWORD=change-me \
+  -e SECRET=replace-with-a-long-random-string \
+  -e APIKEY=replace-with-a-long-random-api-key \
+  -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
+  gigeritch/serpbear:latest
+```
+
+If you prefer Docker Compose:
+
+```yaml
+services:
+  serpbear:
+    image: gigeritch/serpbear:latest
+    container_name: serpbear
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      USER: admin
+      PASSWORD: change-me
+      SECRET: replace-with-a-long-random-string
+      APIKEY: replace-with-a-long-random-api-key
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    volumes:
+      - serpbear_data:/app/data
+
+volumes:
+  serpbear_data:
+```
+
+After the container starts, open `http://localhost:3000` and log in with the credentials you configured.
+
 #### Getting Started
 
-- **Step 1:** Deploy & Run the App.
+- **Step 1:** Install and run the App, preferably with the Docker image above.
 - **Step 2:** Access your App and Login.
 - **Step 3:** Add your First domain.
 - **Step 4:** Get a free API key from ScrapingRobot or select a paid provider (see below) . Skip if you want to use Proxy ips.
@@ -41,7 +92,6 @@ When you [integrate Google Search Console](https://docs.serpbear.com/miscellaneo
 #### SerpBear Integrates with popular SERP scraping services
 
 If you don't want to use proxies, you can use third party Scraping services to scrape Google Search results.
-
 
 | Service           | Cost          | SERP Lookup    | API |
 | ----------------- | ------------- | -------------- | --- |
@@ -58,3 +108,17 @@ If you don't want to use proxies, you can use third party Scraping services to s
 
 - Next.js for Frontend & Backend.
 - Sqlite for Database.
+
+#### Releases
+
+- Source code releases are published in [`gigerIT/serpbear` releases](https://github.com/gigerIT/serpbear/releases).
+- Docker images are published on Docker Hub at [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
+- We recommend pinning a version tag in production and moving to newer releases on your own schedule.
+
+#### Release Automation
+
+- GitHub Actions runs CI on every pull request and push to `main`.
+- [`release-please`](https://github.com/googleapis/release-please) creates or updates the release PR after releasable commits land on `main`.
+- Merging that release PR automatically creates the GitHub release, rebuilds the released tag, and publishes Docker images to the configured Docker Hub repository.
+- Required repository secrets: `RELEASE_PLEASE_TOKEN`, `DOCKERHUB_TOKEN`.
+- Required repository variables: `DOCKERHUB_USERNAME`, `DOCKERHUB_REPOSITORY`.
