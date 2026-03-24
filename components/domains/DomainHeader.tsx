@@ -36,7 +36,7 @@ const DomainHeader = (
       <div className='domain_keywords_head w-full '>
          <div>
             <h1 className="hidden lg:block text-xl font-bold my-3" data-testid="domain-header">
-               {domain && domain.domain && <><i className=' capitalize font-bold not-italic'>{domain.domain.charAt(0)}</i>{domain.domain.slice(1)}</>}
+               {domain?.domain}
             </h1>
             <div className='domain_selector bg-white mt-2 lg:hidden'>
                <SelectField
