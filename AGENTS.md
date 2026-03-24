@@ -55,6 +55,7 @@
 - `NEXT_PUBLIC_APP_URL` must point at the running app or cron-triggered requests will fail.
 - `data/` is writable application state; never commit local runtime contents or build logic that assumes those files already exist.
 - Release automation uses `release-please`; commit types `feat`, `fix`, `perf`, and `deps` feed the changelog.
+- Release PR merges to `main` do not run `.github/workflows/ci.yml`; that workflow ignores the standard release-please file set and also skips push jobs whose merge commit message includes `chore(release):`, while `.github/workflows/release.yml` performs the post-merge lint/test/build validation.
 
 ## AGENTS.md Maintenance
 
