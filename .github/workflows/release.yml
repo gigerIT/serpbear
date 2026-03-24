@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: "25"
   RELEASE_PLEASE_VERSION: "17.3.0"
 
 jobs:
