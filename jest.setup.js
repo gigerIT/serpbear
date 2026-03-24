@@ -1,8 +1,10 @@
 // eslint-disable-next-line no-unused-vars
-import 'isomorphic-fetch';
-import './styles/globals.css';
-import '@testing-library/jest-dom';
-import { enableFetchMocks } from 'jest-fetch-mock';
+import "isomorphic-fetch";
+import "./styles/globals.css";
+import "@testing-library/jest-dom";
+import { enableFetchMocks } from "jest-fetch-mock";
+import { TextEncoder, TextDecoder } from "util";
+import { ReadableStream, WritableStream, TransformStream } from "stream/web";
 // Optional: configure or set up a testing framework before each test.
 // If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
 
@@ -10,17 +12,29 @@ import { enableFetchMocks } from 'jest-fetch-mock';
 // Learn more: https://github.com/testing-library/jest-dom
 
 window.matchMedia = (query) => ({
-   matches: false,
-   media: query,
-   onchange: null,
-   addListener: jest.fn(), // deprecated
-   removeListener: jest.fn(), // deprecated
-   addEventListener: jest.fn(),
-   removeEventListener: jest.fn(),
-   dispatchEvent: jest.fn(),
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: jest.fn(), // deprecated
+  removeListener: jest.fn(), // deprecated
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  dispatchEvent: jest.fn(),
 });
 
-global.ResizeObserver = require('resize-observer-polyfill');
+global.ResizeObserver = require("resize-observer-polyfill");
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+global.ReadableStream = ReadableStream;
+global.WritableStream = WritableStream;
+global.TransformStream = TransformStream;
+global.BroadcastChannel = class BroadcastChannel {
+  constructor() {}
+  postMessage() {}
+  close() {}
+  addEventListener() {}
+  removeEventListener() {}
+};
 
 // Enable Fetch Mocking
 enableFetchMocks();
