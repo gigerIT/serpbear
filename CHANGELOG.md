@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.0.4](https://github.com/gigerIT/serpbear/compare/v3.0.3...v3.0.4) (2026-03-24)
+
+
+### Bug Fixes
+
+* render domain title without split markup ([096c9ef](https://github.com/gigerIT/serpbear/commit/096c9efb8145870e8362dbe53924a8852af41639))
+* restore semver release tags ([329e28d](https://github.com/gigerIT/serpbear/commit/329e28dfae3fad927f7164fabef6fe7bb5b12354))
+* skip duplicate CI after release merges ([f4a9111](https://github.com/gigerIT/serpbear/commit/f4a91118647ab32058208dfd0bf812209e8c2068))
+
 ## [3.0.3](https://github.com/gigerIT/serpbear/compare/serpbear-v3.0.2...serpbear-v3.0.3) (2026-03-24)
 
 
