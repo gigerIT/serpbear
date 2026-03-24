@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  RELEASE_PLEASE_VERSION: "17.3.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Capture existing GitHub releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=20" > releases-before.json
+
+      - name: Create GitHub release for merged release PRs
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: >
+          npx --yes release-please@${RELEASE_PLEASE_VERSION} github-release
+          --token="${GITHUB_TOKEN}"
+          --repo-url="${GITHUB_REPOSITORY}"
+          --target-branch="main"
+          --config-file="release-please-config.json"
+          --manifest-file=".release-please-manifest.json"
+
+      - name: Capture GitHub releases after tagging
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=20" > releases-after.json
+
+      - name: Detect newly created release
+        id: detect_release
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const before = JSON.parse(fs.readFileSync('releases-before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('releases-after.json', 'utf8'));
+          const beforeIds = new Set(before.map((release) => release.id));
+          const createdRelease = after.find((release) => !beforeIds.has(release.id) && !release.draft);
+          const outputFile = process.env.GITHUB_OUTPUT;
+
+          if (!createdRelease) {
+            fs.appendFileSync(outputFile, 'created=false\n');
+            fs.appendFileSync(outputFile, 'tag_name=\n');
+            fs.appendFileSync(outputFile, 'version=\n');
+            process.exit(0);
+          }
+
+          const tagName = createdRelease.tag_name || '';
+          const version = tagName.replace(/^v/, '');
+
+          fs.appendFileSync(outputFile, 'created=true\n');
+          fs.appendFileSync(outputFile, `tag_name=${tagName}\n`);
+          fs.appendFileSync(outputFile, `version=${version}\n`);
+          NODE
+
+      - name: Create or update release PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: >
+          npx --yes release-please@${RELEASE_PLEASE_VERSION} release-pr
+          --token="${GITHUB_TOKEN}"
+          --repo-url="${GITHUB_REPOSITORY}"
+          --target-branch="main"
+          --config-file="release-please-config.json"
+          --manifest-file=".release-please-manifest.json"
+
+      - name: Checkout released tag
+        if: steps.detect_release.outputs.created == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.detect_release.outputs.tag_name }}
+          fetch-depth: 0
+
+      - name: Install dependencies for released tag
+        if: steps.detect_release.outputs.created == 'true'
+        run: npm ci
+
+      - name: Lint released tag
+        if: steps.detect_release.outputs.created == 'true'
+        run: npm run lint
+
+      - name: Test released tag
+        if: steps.detect_release.outputs.created == 'true'
+        run: npm run test:ci
+
+      - name: Build released tag
+        if: steps.detect_release.outputs.created == 'true'
+        run: npm run build
+
+      - name: Log in to Docker Hub
+        if: steps.detect_release.outputs.created == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        if: steps.detect_release.outputs.created == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.detect_release.outputs.created == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate Docker metadata
+        if: steps.detect_release.outputs.created == 'true'
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_REPOSITORY }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.detect_release.outputs.tag_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.detect_release.outputs.tag_name }}
+            type=semver,pattern={{major}},value=${{ steps.detect_release.outputs.tag_name }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        if: steps.detect_release.outputs.created == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
