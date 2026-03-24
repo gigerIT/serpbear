@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.0.1](https://github-gigerit/gigerIT/serpbear/compare/v3.0.0...v3.0.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* update ScrapingRobot API requests ([05de81e](https://github-gigerit/gigerIT/serpbear/commit/05de81edb4720c264c2ba3cf674009166be2c4b7))
+
 ## [3.0.0](https://github.com/towfiqi/serpbear/compare/v2.0.7...v3.0.0) (2026-03-01)
 
 
