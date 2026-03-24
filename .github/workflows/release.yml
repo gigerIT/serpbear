@@ -75,7 +75,8 @@ jobs:
           }
 
           const tagName = createdRelease.tag_name || '';
-          const version = tagName.replace(/^v/, '');
+          const versionMatch = tagName.match(/(?:^|-)v?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/);
+          const version = versionMatch ? versionMatch[1] : tagName.replace(/^v/, '');
 
           fs.appendFileSync(outputFile, 'created=true\n');
           fs.appendFileSync(outputFile, `tag_name=${tagName}\n`);
@@ -138,9 +139,9 @@ jobs:
         with:
           images: ${{ vars.DOCKERHUB_REPOSITORY }}
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.detect_release.outputs.tag_name }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.detect_release.outputs.tag_name }}
-            type=semver,pattern={{major}},value=${{ steps.detect_release.outputs.tag_name }}
+            type=semver,pattern={{version}},value=${{ steps.detect_release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.detect_release.outputs.version }}
+            type=semver,pattern={{major}},value=${{ steps.detect_release.outputs.version }}
             type=raw,value=latest
 
       - name: Build and push Docker image
