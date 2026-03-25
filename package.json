@@ -39,7 +39,6 @@
     "dotenv": "^16.0.3",
     "google-auth-library": "^9.6.3",
     "https-proxy-agent": "^5.0.1",
-    "isomorphic-fetch": "^3.0.0",
     "jsonwebtoken": "^9.0.3",
     "next": "^16.2.1",
     "nodemailer": "^8.0.1",
@@ -60,11 +59,11 @@
     "umzug": "^3.8.2"
   },
   "devDependencies": {
+    "@happy-dom/jest-environment": "^20.7.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^14.0.0",
     "@types/cookies": "^0.7.7",
     "@types/cryptr": "^4.0.3",
-    "@types/isomorphic-fetch": "^0.0.36",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^8.5.9",
     "@types/node": "18.11.0",
@@ -77,8 +76,6 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.1",
     "jest": "^30.3.0",
-    "jest-environment-jsdom": "^30.3.0",
-    "jest-fetch-mock": "^3.0.3",
     "msw": "^2.12.10",
     "next-router-mock": "^0.9.10",
     "postcss": "^8.5.6",
@@ -87,6 +84,7 @@
     "sass": "^1.97.3",
     "sequelize-cli": "^6.6.5",
     "tailwindcss": "^3.4.14",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "undici": "^6.23.0"
   }
 }

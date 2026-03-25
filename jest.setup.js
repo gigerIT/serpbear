@@ -1,39 +1,111 @@
-import "isomorphic-fetch";
 import "./styles/globals.css";
 import "@testing-library/jest-dom";
-import { enableFetchMocks } from "jest-fetch-mock";
 import { TextEncoder, TextDecoder } from "util";
-import { ReadableStream, WritableStream, TransformStream } from "stream/web";
-// Optional: configure or set up a testing framework before each test.
-// If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
 
-// Used for __tests__/testing-library.js
-// Learn more: https://github.com/testing-library/jest-dom
+jest.mock("next/image", () => ({
+  __esModule: true,
+  default: ({
+    src,
+    alt,
+    width,
+    height,
+    unoptimized: _unoptimized,
+    ...rest
+  }) => {
+    const React = require("react");
+    return React.createElement("img", { src, alt, width, height, ...rest });
+  },
+}));
 
-window.matchMedia = (query) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: jest.fn(), // deprecated
-  removeListener: jest.fn(), // deprecated
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  dispatchEvent: jest.fn(),
-});
-
-global.ResizeObserver = require("resize-observer-polyfill");
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
-global.ReadableStream = ReadableStream;
-global.WritableStream = WritableStream;
-global.TransformStream = TransformStream;
-global.BroadcastChannel = class BroadcastChannel {
-  constructor() {}
-  postMessage() {}
-  close() {}
-  addEventListener() {}
-  removeEventListener() {}
-};
 
-// Enable Fetch Mocking
-enableFetchMocks();
+const {
+  ReadableStream,
+  WritableStream,
+  TransformStream,
+} = require("stream/web");
+
+if (!global.ReadableStream) {
+  global.ReadableStream = ReadableStream;
+}
+if (!global.WritableStream) {
+  global.WritableStream = WritableStream;
+}
+if (!global.TransformStream) {
+  global.TransformStream = TransformStream;
+}
+
+const { fetch: undiciFetch, Headers, Request, Response } = require("undici");
+
+if (typeof window !== "undefined") {
+  window.matchMedia = (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  });
+
+  const locationMock = {
+    hash: "",
+    host: "localhost",
+    hostname: "localhost",
+    href: "http://localhost/",
+    origin: "http://localhost",
+    pathname: "/",
+    port: "",
+    protocol: "http:",
+    search: "",
+    assign: jest.fn((value) => {
+      locationMock.href = value;
+    }),
+    replace: jest.fn((value) => {
+      locationMock.href = value;
+    }),
+    reload: jest.fn(),
+    toString: () => locationMock.href,
+  };
+
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: locationMock,
+  });
+}
+
+global.ResizeObserver = require("resize-observer-polyfill");
+
+if (!global.fetch) {
+  global.fetch = undiciFetch;
+}
+global.Headers = Headers;
+global.Request = Request;
+global.Response = Response;
+
+class BroadcastChannelMock {
+  constructor(name) {
+    this.name = name;
+    this.messages = [];
+  }
+
+  postMessage(message) {
+    this.messages.push(message);
+  }
+
+  close() {
+    this.messages = [];
+  }
+
+  addEventListener() {
+    return this;
+  }
+
+  removeEventListener() {
+    return this;
+  }
+}
+
+global.BroadcastChannel = BroadcastChannelMock;
