@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.1.2](https://github.com/gigerIT/serpbear/compare/v3.1.1...v3.1.2) (2026-03-25)
+
+
+### Bug Fixes
+
+* align remaining scraper provider URLs ([093ceb8](https://github.com/gigerIT/serpbear/commit/093ceb8c3c3f7b34e6a5d24cc1463a04aae9b0db))
+* harden scraper parsing and refresh cleanup ([0d016af](https://github.com/gigerIT/serpbear/commit/0d016af56ed37c3c06d2021186eceddd1a71bcdc))
+* harden scraper provider extractors ([b2119f9](https://github.com/gigerIT/serpbear/commit/b2119f9c62509777eeaea97b6f4f31237091e5bc))
+* harden scraper retries and retry queue ([f1dad51](https://github.com/gigerIT/serpbear/commit/f1dad51001115e9ca05dadcb6532e5e86e27bd45))
+* support scraper api key compatibility ([7d5b7fa](https://github.com/gigerIT/serpbear/commit/7d5b7faa52186c433be5a8bb9071220213c4d373))
+* update scraper provider request formats ([52a6b23](https://github.com/gigerIT/serpbear/commit/52a6b234418e8f070abc6b1e4d5775d14cfc82ef))
+
+
+### Dependencies
+
+* replace jsdom fetch test deps ([7c4c4d2](https://github.com/gigerIT/serpbear/commit/7c4c4d29ae0bdc6df4c174a204887a8f24126fb1))
+* replace sqlite3 with better-sqlite3 ([6a44afb](https://github.com/gigerIT/serpbear/commit/6a44afbdda6d55662b8108fe1ba57757a01e3643))
+* update Jest to v30 ([40a7eb6](https://github.com/gigerIT/serpbear/commit/40a7eb60d13869bd619d572a7c019c1fbf77da79))
+* update sqlite3 to v6 ([4d366aa](https://github.com/gigerIT/serpbear/commit/4d366aa45147eafb9def483df915a4c858e3538c))
+* upgrade Next.js 16 tooling ([c3fa551](https://github.com/gigerIT/serpbear/commit/c3fa5519c3d537f147f2d6d9dc10013725d57baf))
+
 ## [3.1.1](https://github.com/gigerIT/serpbear/compare/v3.1.0...v3.1.1) (2026-03-25)
 
 
