@@ -2,7 +2,7 @@
 
 # SerpBear
 
-![Codacy Badge](https://app.codacy.com/project/badge/Grade/7e7a0030c3f84c6fb56a3ce6273fbc1d) ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear) [![StandWithPalestine](https://raw.githubusercontent.com/Safouene1/support-palestine-banner/master/StandWithPalestine.svg)](https://www.youtube.com/watch?v=bjtDsd0g468&rco=1)
+![Codacy Badge](https://app.codacy.com/project/badge/Grade/7e7a0030c3f84c6fb56a3ce6273fbc1d) ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear)
 
 #### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Fork Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
 
@@ -84,7 +84,7 @@ After the container starts, open `http://localhost:3000` and log in with the cre
 - **Step 1:** Install and run the App, preferably with the Docker image above.
 - **Step 2:** Access your App and Login.
 - **Step 3:** Add your First domain.
-- **Step 4:** Get a free API key from ScrapingRobot or select a paid provider (see below) . Skip if you want to use Proxy ips.
+- **Step 4:** Pick a SERP provider from the list below. Several offer a free tier, or you can skip this step and use your own proxy IPs.
 - **Step 5:** Setup the Scraping API/Proxy from the App's Settings interface.
 - **Step 6:** Add your keywords and start tracking.
 - **Step 7:** Optional. From the Settings panel, setup SMTP details to get notified of your keywords positions through email. You can use ElasticEmail and Sendpulse SMTP services that are free.
@@ -93,16 +93,18 @@ After the container starts, open `http://localhost:3000` and log in with the cre
 
 If you don't want to use proxies, you can use third party Scraping services to scrape Google Search results.
 
-| Service           | Cost          | SERP Lookup    | API |
-| ----------------- | ------------- | -------------- | --- |
-| scrapingrobot.com | Free          | 5000/mo        | Yes |
-| serply.io         | $49/mo        | 5000/mo        | Yes |
-| serpapi.com       | From $50/mo   | From 5,000/mo  | Yes |
-| spaceserp.com     | $59/lifetime  | 15,000/mo      | Yes |
-| SearchApi.io      | From $40/mo   | From 10,000/mo | Yes |
-| valueserp.com     | Pay As You Go | $2.50/1000 req | No  |
-| serper.dev        | Pay As You Go | $1.00/1000 req | No  |
-| hasdata.com       | From $29/mo   | From 10,000/mo | Yes |
+| Service           | Pricing                              | Free tier         | Included usage      | API |
+| ----------------- | ------------------------------------ | ----------------- | ------------------- | --- |
+| hasdata.com       | From $49/mo                          | 1,000 requests/mo | 200,000 requests/mo | Yes |
+| scrapingrobot.com | Usage-based from $0.00004/request    | 5,000 queries/mo  | Pay as you go       | Yes |
+| searchapi.io      | From $40/mo                          | 100 requests      | 10,000 searches/mo  | Yes |
+| serpapi.com       | From $25/mo                          | 250 searches/mo   | 1,000 searches/mo   | Yes |
+| serper.dev        | Usage-based from $0.30/1,000 queries | 2,500 queries     | Pay as you go       | Yes |
+| serply.io         | From $50/mo                          | 300 requests/mo   | 50,000 requests/mo  | Yes |
+| spaceserp.com     | From $14.99/mo                       | None found        | 1,000 searches/mo   | Yes |
+| valueserp.com     | From $50/mo                          | Free trial        | 25,000 credits/mo   | Yes |
+
+Pricing and free-tier details were checked against the providers' public pricing pages on 2026-03-25 and may change over time.
 
 **Tech Stack**
 
