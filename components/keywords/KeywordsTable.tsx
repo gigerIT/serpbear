@@ -69,9 +69,16 @@ const KeywordsTable = (props: KeywordsTableProps) => {
   const [scDataType, setScDataType] = useState<string>('threeDays');
   const [showScDataTypes, setShowScDataTypes] = useState<boolean>(false);
   const [maxTitleColumnWidth, setMaxTitleColumnWidth] = useState(235);
+  const [pendingDetailRefresh, setPendingDetailRefresh] = useState<{
+    id: number;
+    lastUpdated: string;
+  } | null>(null);
   const { mutate: deleteMutate } = useDeleteKeywords(() => {});
   const { mutate: favoriteMutate } = useFavKeywords(() => {});
-  const { mutate: refreshMutate } = useRefreshKeywords(() => {});
+  const { mutate: refreshMutate } = useRefreshKeywords(
+    () => {},
+    () => setPendingDetailRefresh(null),
+  );
   const [isMobile] = useIsMobile();
 
   useWindowResize(() => {
@@ -229,6 +236,33 @@ const KeywordsTable = (props: KeywordsTableProps) => {
   ).length;
   const selectedAllItems = processedKeywords[device].length > 0
     && visibleSelectedCount === processedKeywords[device].length;
+  const activeKeyword = showKeyDetails
+    ? keywords.find((keyword) => keyword.ID === showKeyDetails.ID)
+      || showKeyDetails
+    : null;
+  const isActiveKeywordRefreshPending = pendingDetailRefresh?.id === activeKeyword?.ID;
+
+  useEffect(() => {
+    if (!pendingDetailRefresh) {
+      return;
+    }
+
+    const pendingKeyword = keywords.find(
+      (keyword) => keyword.ID === pendingDetailRefresh.id,
+    );
+
+    if (!pendingKeyword) {
+      setPendingDetailRefresh(null);
+      return;
+    }
+
+    if (
+      pendingKeyword.updating
+      || pendingKeyword.lastUpdated !== pendingDetailRefresh.lastUpdated
+    ) {
+      setPendingDetailRefresh(null);
+    }
+  }, [keywords, pendingDetailRefresh]);
 
   return (
     <div>
@@ -466,10 +500,20 @@ const KeywordsTable = (props: KeywordsTableProps) => {
           </div>
         </div>
       </div>
-      {showKeyDetails && showKeyDetails.ID && (
+      {activeKeyword && activeKeyword.ID && (
         <KeywordDetails
-          keyword={showKeyDetails}
+          keyword={activeKeyword}
           closeDetails={() => setShowKeyDetails(null)}
+          refreshKeyword={(keywordID: number) => {
+            setPendingDetailRefresh({
+              id: keywordID,
+              lastUpdated: activeKeyword.lastUpdated,
+            });
+            refreshMutate({ ids: [keywordID] });
+          }}
+          refreshingKeyword={
+            Boolean(activeKeyword.updating) || isActiveKeywordRefreshPending
+          }
         />
       )}
       {showRemoveModal && selectedKeywords.length > 0 && (
