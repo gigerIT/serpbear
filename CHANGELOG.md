@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.1.1](https://github.com/gigerIT/serpbear/compare/v3.1.0...v3.1.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* add keyword detail panel refresh action ([25736b1](https://github.com/gigerIT/serpbear/commit/25736b1f7fa25580b4edc398d5964f918745ff30))
+* improve scraper logging context ([a9f7b74](https://github.com/gigerIT/serpbear/commit/a9f7b742d815065592fd9fee7c989e8130aea505))
+* keep refresh requests asynchronous ([beeebb5](https://github.com/gigerIT/serpbear/commit/beeebb518650581b62062b31bcfd12d1e4f9b573))
+* preserve lowercase domain labels in selectors ([7a14010](https://github.com/gigerIT/serpbear/commit/7a140101337c0d81fc46185b723a449c96b1e819))
+* preserve scraper error details in refresh logs ([637550c](https://github.com/gigerIT/serpbear/commit/637550c160446989cbaa5a5d5e6af6e3345c5b74))
+* trust real request security for auth cookies ([2b152fa](https://github.com/gigerIT/serpbear/commit/2b152faf6aa5b11b5edfb4e3289a730c93e9971e))
+
 ## [3.1.0](https://github.com/gigerIT/serpbear/compare/v3.0.5...v3.1.0) (2026-03-25)
 
 
