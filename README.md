@@ -2,7 +2,8 @@
 
 # SerpBear
 
-![Codacy Badge](https://app.codacy.com/project/badge/Grade/7e7a0030c3f84c6fb56a3ce6273fbc1d?style=for-the-badge) ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear?style=for-the-badge) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear?style=for-the-badge) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear?style=for-the-badge)
+![GitHub](https://img.shields.io/github/license/gigerIT/serpbear?style=for-the-badge) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear?style=for-the-badge) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear?style=for-the-badge)
+s
 
 #### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Fork Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
 
