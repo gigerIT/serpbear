@@ -4,9 +4,9 @@
 
 ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear?style=for-the-badge) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear?style=for-the-badge) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear?style=for-the-badge)
 
-SerpBear is the actively maintained, newer fork of the original [SerpBear](https://github.com/towfiqi/serpbear). If you want the version with current fixes, compatibility updates, and ongoing releases, start here.
+SerpBear is an actively maintained fork of the original [SerpBear](https://github.com/towfiqi/serpbear), built with appreciation for the work that made the project useful in the first place.
 
-This fork is used for client projects and is maintained with production use in mind. The goal is to preserve what made SerpBear useful while continuing to ship bug fixes, infrastructure updates, and new features.
+This fork is used for client projects and maintained with production use in mind. The goal is to carry the project forward respectfully with ongoing bug fixes, compatibility updates, infrastructure improvements, and new features.
 
 #### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
 
@@ -14,10 +14,10 @@ This fork is used for client projects and is maintained with production use in m
 
 ## Why This Fork
 
-- **Maintained and current:** This is the version intended for users who want a newer, actively improved SerpBear.
-- **Production-focused:** It is kept working for real deployments with compatibility updates, bug fixes, and continued releases.
-- **Same core product, better maintained:** Self-hosted rank tracking, keyword research, notifications, and integrations remain the focus.
-- **Built on the original project:** This fork exists to continue the work respectfully and keep it useful for teams that depend on it.
+- **Actively maintained:** This fork continues to receive updates, fixes, and releases for people still relying on SerpBear.
+- **Production-focused:** It is maintained for real deployments, with attention to compatibility, stability, and long-term usability.
+- **Faithful to the original project:** Self-hosted rank tracking, keyword research, notifications, and integrations remain the core focus.
+- **Built with respect for the original work:** This fork exists to continue and support the project for teams that depend on it.
 
 ## What You Get
 
@@ -106,18 +106,18 @@ SerpBear can use your own proxies or these built-in integrations:
 
 If you want a quick free-tier comparison, keep this as a starting point and verify current limits on each provider's site before choosing one:
 
-| Service           | Free tier             | Pricing                              | Included usage         | API |
-| ----------------- | --------------------- | ------------------------------------ | ---------------------- | --- |
-| hasdata.com       | 1,000 requests/mo     | From $49/mo                          | 200,000 requests/mo    | Yes |
-| scrapingant.com   | 10,000 credits/mo     | From $19/mo                          | 100,000 credits/mo     | Yes |
-| scrapingrobot.com | 5,000 requests/mo     | Usage-based from $0.00004/request    | Pay as you go          | Yes |
-| searchapi.io      | 100 requests          | From $40/mo                          | 10,000 searches/mo     | Yes |
-| serpapi.com       | 250 searches/mo       | From $25/mo                          | 1,000 searches/mo      | Yes |
-| serper.dev        | 2,500 queries         | Usage-based from $0.30/1,000 queries | Pay as you go          | Yes |
-| serply.io         | 300 requests/mo       | From $50/mo                          | 50,000 requests/mo     | Yes |
-| spaceserp.com     | -                     | From $14.99/mo                       | 1,000 searches/mo      | Yes |
-| valueserp.com     | Free trial            | From $50/mo                          | 25,000 credits/mo      | Yes |
-| crazyserp.com     | -                     | From $50/mo                          | 25,000 credits/mo      | Yes |
+| Service           | Free tier         | Pricing                              | Included usage      | API |
+| ----------------- | ----------------- | ------------------------------------ | ------------------- | --- |
+| hasdata.com       | 1,000 requests/mo | From $49/mo                          | 200,000 requests/mo | Yes |
+| scrapingant.com   | 10,000 credits/mo | From $19/mo                          | 100,000 credits/mo  | Yes |
+| scrapingrobot.com | 5,000 requests/mo | Usage-based from $0.00004/request    | Pay as you go       | Yes |
+| searchapi.io      | 100 requests      | From $40/mo                          | 10,000 searches/mo  | Yes |
+| serpapi.com       | 250 searches/mo   | From $25/mo                          | 1,000 searches/mo   | Yes |
+| serper.dev        | 2,500 queries     | Usage-based from $0.30/1,000 queries | Pay as you go       | Yes |
+| serply.io         | 300 requests/mo   | From $50/mo                          | 50,000 requests/mo  | Yes |
+| spaceserp.com     | -                 | From $14.99/mo                       | 1,000 searches/mo   | Yes |
+| valueserp.com     | Free trial        | From $50/mo                          | 25,000 credits/mo   | Yes |
+| crazyserp.com     | -                 | From $50/mo                          | 25,000 credits/mo   | Yes |
 
 CrazySERP is also supported in-app, but its pricing and free-tier details are not listed here because they were not documented in the previous README.
 
