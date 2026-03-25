@@ -1,44 +1,60 @@
-import countries from '../../utils/countries';
+import countries from "../../utils/countries";
 
 interface SearchApiResult {
-   title: string,
-   link: string,
-   position: number,
- }
+  title: string;
+  link: string;
+  position: number;
+}
 
-const searchapi:ScraperSettings = {
-  id: 'searchapi',
-  name: 'SearchApi.io',
-  website: 'searchapi.io',
+const searchapi: ScraperSettings = {
+  id: "searchapi",
+  name: "SearchApi.io",
+  website: "searchapi.io",
   allowsCity: true,
   nativePagination: true,
   headers: (keyword, settings) => {
-     return {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${settings.scaping_api}`,
-     };
+    const apiKey = settings.scraping_api || settings.scaping_api;
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    };
   },
-  scrapeURL: (keyword) => {
-   const country = keyword.country || 'US';
-   const countryName = countries[country][0];
-   const location = keyword.city && countryName ? `&location=${encodeURIComponent(`${keyword.city},${countryName}`)}` : '';
-     return `https://www.searchapi.io/api/v1/search?engine=google&q=${encodeURIComponent(keyword.keyword)}&num=100&gl=${country}&device=${keyword.device}${location}`;
+  scrapeURL: (keyword, settings, countryData) => {
+    const country = keyword.country || "US";
+    const countryName = countries[country][0];
+    const apiKey = settings.scraping_api || settings.scaping_api || "";
+    const params = new URLSearchParams();
+    params.set("api_key", apiKey);
+    params.set("engine", "google");
+    params.set("q", keyword.keyword);
+    if (keyword.city && countryName) {
+      params.set("location", `${keyword.city},${countryName}`);
+    }
+    if (keyword.device === "mobile") {
+      params.set("device", "mobile");
+    }
+    params.set("gl", country);
+    params.set("hl", countryData[country][2]);
+    return `https://www.searchapi.io/api/v1/search?${params.toString()}`;
   },
-  resultObjectKey: 'organic_results',
+  resultObjectKey: "organic_results",
   serpExtractor: (content) => {
-     const extractedResult = [];
-     const results: SearchApiResult[] = (typeof content === 'string') ? JSON.parse(content) : content as SearchApiResult[];
+    const extractedResult = [];
+    const results: SearchApiResult[] =
+      typeof content === "string"
+        ? JSON.parse(content)
+        : (content as SearchApiResult[]);
 
-     for (const { link, title, position } of results) {
-        if (title && link) {
-           extractedResult.push({
-              title,
-              url: link,
-              position,
-           });
-        }
-     }
-     return extractedResult;
+    for (const { link, title, position } of results) {
+      if (title && link) {
+        extractedResult.push({
+          title,
+          url: link,
+          position,
+        });
+      }
+    }
+    return extractedResult;
   },
 };
 
