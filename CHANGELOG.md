@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.1.0](https://github.com/gigerIT/serpbear/compare/v3.0.5...v3.1.0) (2026-03-25)
+
+
+### Features
+
+* add shift-click range selection for keyword tables ([e28d533](https://github.com/gigerIT/serpbear/commit/e28d533b5c42647d3e2dec80bb87b23c36448d5b))
+* **api:** add POST /keywords endpoint to allow adding keywords via API ([61e4099](https://github.com/gigerIT/serpbear/commit/61e4099237b86b50bcbc27d3ed8960caeb7a96bf))
+
+
+### Bug Fixes
+
+* enforce session expiry and reliable logout ([19a54b6](https://github.com/gigerIT/serpbear/commit/19a54b648b0600f660a478c9eb08bb6364e13e8d))
+* localize keyword details Google SERP link ([531e5cf](https://github.com/gigerIT/serpbear/commit/531e5cffc824d6b9f59bb9393fbe44a6f0be7efa))
+* require auth for notification endpoint ([d1e81a8](https://github.com/gigerIT/serpbear/commit/d1e81a8aa9853bab915365b21960aadc996e6efa))
+* validate oauth state for google ads callback ([788ecbd](https://github.com/gigerIT/serpbear/commit/788ecbd7fc29bb3c59847969fec5b2a6d72873af))
+
 ## [3.0.5](https://github.com/gigerIT/serpbear/compare/v3.0.4...v3.0.5) (2026-03-25)
 
 
