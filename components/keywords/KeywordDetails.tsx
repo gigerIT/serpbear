@@ -132,7 +132,7 @@ const KeywordDetails = ({ keyword, closeDetails }:KeywordDetailsProps) => {
                      <div className="keywordDetails__section__head flex justify-between items-center pb-4 mb-4 border-b border-b-slate-200">
                         <h3 className=' font-bold text-gray-700 lg:text-lg'>Google Search Result
                            <a className='text-gray-400 hover:text-indigo-600 inline-block ml-1 px-2 py-1'
-                              href={`https://www.google.com/search?q=${encodeURI(keyword.keyword)}`}
+                              href={`https://www.google.com/search?q=${encodeURIComponent(keyword.keyword)}&gl=${keyword.country.toLowerCase()}`}
                               target="_blank"
                               rel='noreferrer'>
                               <Icon type='link' size={14} />
