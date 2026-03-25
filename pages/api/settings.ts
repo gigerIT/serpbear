@@ -11,6 +11,18 @@ type SettingsGetResponse = {
   error?: string;
 };
 
+const getProvidedScraperApiKey = (settings: Partial<SettingsType>): string => {
+  if (typeof settings.scraping_api === "string") {
+    return settings.scraping_api;
+  }
+
+  if (typeof settings.scaping_api === "string") {
+    return settings.scaping_api;
+  }
+
+  return "";
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -81,8 +93,9 @@ const updateSettings = async (
       previousClientID !== nextClientID ||
       previousClientSecret !== nextClientSecret;
 
-    const scaping_api = settings.scaping_api
-      ? cryptr.encrypt(settings.scaping_api.trim())
+    const scraperApiKey = getProvidedScraperApiKey(settings);
+    const scaping_api = scraperApiKey
+      ? cryptr.encrypt(scraperApiKey.trim())
       : "";
     const smtp_password = settings.smtp_password
       ? cryptr.encrypt(settings.smtp_password.trim())
@@ -111,6 +124,7 @@ const updateSettings = async (
 
     const securedSettings = {
       ...settings,
+      scraping_api: scaping_api,
       scaping_api,
       smtp_password,
       search_console_client_email,
@@ -155,8 +169,9 @@ export const getAppSettings = async (): Promise<SettingsType> => {
 
     try {
       const cryptr = new Cryptr(process.env.SECRET as string);
-      const scaping_api = settings.scaping_api
-        ? cryptr.decrypt(settings.scaping_api)
+      const encryptedScraperApi = settings.scraping_api || settings.scaping_api;
+      const scaping_api = encryptedScraperApi
+        ? cryptr.decrypt(encryptedScraperApi)
         : "";
       const smtp_password = settings.smtp_password
         ? cryptr.decrypt(settings.smtp_password)
@@ -182,6 +197,7 @@ export const getAppSettings = async (): Promise<SettingsType> => {
 
       decryptedSettings = {
         ...settings,
+        scraping_api: scaping_api,
         scaping_api,
         smtp_password,
         search_console_client_email,
@@ -216,6 +232,7 @@ export const getAppSettings = async (): Promise<SettingsType> => {
     console.log("[ERROR] Getting App Settings. ", error);
     const settings: SettingsType = {
       scraper_type: "none",
+      scraping_api: "",
       notification_interval: "never",
       notification_email: "",
       notification_email_from: "",
@@ -251,6 +268,6 @@ export const getAppSettings = async (): Promise<SettingsType> => {
       JSON.stringify([]),
       { encoding: "utf-8" }
     );
-    return { ...settings, ...otherSettings };
+    return { ...settings, scaping_api: "", ...otherSettings };
   }
 };

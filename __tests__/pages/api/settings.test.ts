@@ -94,6 +94,31 @@ describe("/api/settings", () => {
     });
   });
 
+  it("returns a decrypted scraping_api value on GET when the stored field uses the legacy key", async () => {
+    mockState.readFile
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          scaping_api: "enc-scraper-key",
+        })
+      )
+      .mockResolvedValueOnce(JSON.stringify([]));
+
+    const req = {
+      method: "GET",
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      settings: {
+        scaping_api: "decrypted-enc-scraper-key",
+        scraping_api: "decrypted-enc-scraper-key",
+      },
+    });
+  });
+
   it("preserves the refresh token when Google Ads client credentials do not change", async () => {
     const req = {
       method: "PUT",
@@ -131,6 +156,25 @@ describe("/api/settings", () => {
     const writePayload = JSON.parse(mockState.writeFile.mock.calls[0][1]);
     expect(writePayload.adwords_refresh_token).toBe("");
     expect(mockState.clearAdwordsAccessTokenCache).toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("accepts scraping_api input and persists both scraper api key fields", async () => {
+    const req = {
+      method: "PUT",
+      body: {
+        settings: {
+          scraping_api: "new-scraper-key",
+        },
+      },
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    const writePayload = JSON.parse(mockState.writeFile.mock.calls[0][1]);
+    expect(writePayload.scaping_api).toBe("encrypted-new-scraper-key");
+    expect(writePayload.scraping_api).toBe("encrypted-new-scraper-key");
     expect(res.statusCode).toBe(200);
   });
 });
