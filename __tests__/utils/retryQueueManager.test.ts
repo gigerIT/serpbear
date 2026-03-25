@@ -87,4 +87,35 @@ describe("retryQueueManager", () => {
     expect(lockfile.lock).not.toHaveBeenCalled();
     expect(atomicWriteFile).not.toHaveBeenCalled();
   });
+
+  it("removes a batch of ids from the queue", async () => {
+    (readFile as jest.Mock).mockResolvedValue("[123,456,789]");
+
+    await retryQueueManager.removeBatch(new Set([123, 789]));
+
+    expect(atomicWriteFile).toHaveBeenCalledWith(
+      queuePath,
+      JSON.stringify([456]),
+      "utf-8"
+    );
+  });
+
+  it("returns the current queue contents", async () => {
+    (readFile as jest.Mock).mockResolvedValue("[123,456,789]");
+
+    await expect(retryQueueManager.getQueue()).resolves.toEqual([
+      123, 456, 789,
+    ]);
+    expect(lockfile.lock).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the queue contents", async () => {
+    await retryQueueManager.clearQueue();
+
+    expect(atomicWriteFile).toHaveBeenCalledWith(
+      queuePath,
+      JSON.stringify([]),
+      "utf-8"
+    );
+  });
 });

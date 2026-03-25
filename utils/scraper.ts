@@ -676,8 +676,9 @@ export const scrapeKeywordWithStrategy = async (
     pagesToScrape = Array.from({ length: limit }, (_, i) => i + 1);
   } else if (strategy === "smart") {
     const lastPos = keyword.position;
-    const lastPage = lastPos > 0 ? Math.ceil(lastPos / PAGE_SIZE) : 1;
-    const neighbors = [lastPage - 1, lastPage, lastPage + 1].filter(
+    const lastPage =
+      lastPos > 0 ? Math.min(Math.ceil(lastPos / PAGE_SIZE), TOTAL_PAGES) : 1;
+    const neighbors = [1, lastPage - 1, lastPage, lastPage + 1].filter(
       (p) => p >= 1 && p <= TOTAL_PAGES
     );
     pagesToScrape = [...new Set(neighbors)];

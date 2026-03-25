@@ -8,7 +8,12 @@ jest.mock("../../scrapers/index", () => [
     name: "Test Scraper",
     website: "example.com",
     resultObjectKey: "results",
-    scrapeURL: () => "https://example.com/scrape",
+    scrapeURL: (
+      _keyword: any,
+      _settings: any,
+      _countries: any,
+      pagination: any
+    ) => `https://example.com/scrape?page=${pagination?.page ?? 1}`,
     serpExtractor: (content: any) => content,
   },
 ]);
@@ -16,6 +21,7 @@ jest.mock("../../scrapers/index", () => [
 import {
   normalizeGoogleHref,
   scrapeKeywordFromGoogle,
+  scrapeKeywordWithStrategy,
 } from "../../utils/scraper";
 
 describe("normalizeGoogleHref", () => {
@@ -179,6 +185,76 @@ describe("scraper hardening", () => {
     expect(result).not.toBe(false);
     if (result) {
       expect(result.error).toContain("Failed to parse scraper JSON response");
+    }
+  });
+
+  it("always scrapes page one in smart strategy mode", async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes("page=1")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: async () => ({
+            results: [
+              {
+                title: "Top Result",
+                url: "https://example.com/top-result",
+                position: 1,
+              },
+            ],
+          }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          results: [
+            {
+              title: `Page Result ${url}`,
+              url: "https://elsewhere.com/result",
+              position: 1,
+            },
+          ],
+        }),
+      });
+    });
+
+    const result = await scrapeKeywordWithStrategy(
+      {
+        ...keyword,
+        position: 25,
+      },
+      {
+        ...settings,
+        scrape_strategy: "smart",
+      }
+    );
+
+    expect(result).not.toBe(false);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("page=1"),
+      expect.any(Object)
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("page=2"),
+      expect.any(Object)
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("page=3"),
+      expect.any(Object)
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("page=4"),
+      expect.any(Object)
+    );
+
+    if (result) {
+      expect(result.position).toBe(1);
+      expect(result.url).toBe("https://example.com/top-result");
     }
   });
 });

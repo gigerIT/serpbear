@@ -42,3 +42,37 @@ export const isValidUrl = (str: string) => {
   }
   return url.protocol === "http:" || url.protocol === "https:";
 };
+
+export const normalizeDomainInput = (value: string): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmedValue);
+
+  try {
+    const parsedUrl = new URL(
+      hasScheme ? trimmedValue : `https://${trimmedValue}`
+    );
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return null;
+    }
+
+    const normalizedHost = parsedUrl.hostname.toLowerCase();
+    if (!isValidDomain(normalizedHost)) {
+      return null;
+    }
+
+    const normalizedPath = parsedUrl.pathname.replace(/^\/+|\/+$/g, "");
+    return normalizedPath
+      ? `${normalizedHost}/${normalizedPath}`
+      : normalizedHost;
+  } catch {
+    return null;
+  }
+};

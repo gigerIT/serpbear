@@ -1,21 +1,21 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const mockState = {
-  sign: jest.fn(() => 'signed-token'),
+  sign: jest.fn(() => "signed-token"),
   cookieSet: jest.fn(),
 };
 
-jest.mock('jsonwebtoken', () => ({
+jest.mock("jsonwebtoken", () => ({
   sign: (...args: any[]) => (mockState.sign as any)(...args),
 }));
 
-jest.mock('cookies', () =>
+jest.mock("cookies", () =>
   jest.fn().mockImplementation(() => ({
     set: mockState.cookieSet,
-  })),
+  }))
 );
 
-const handler = require('../../../pages/api/login').default;
+const handler = require("../../../pages/api/login").default;
 
 type MockResponse = {
   statusCode: number;
@@ -41,17 +41,17 @@ const createResponse = () => {
   return res;
 };
 
-describe('/api/login', () => {
+describe("/api/login", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = {
       ...originalEnv,
-      USER: 'admin',
-      PASSWORD: 'super-secret',
-      SECRET: 'jwt-secret',
-      SESSION_DURATION: '2',
+      USER: "admin",
+      PASSWORD: "super-secret",
+      SECRET: "jwt-secret",
+      SESSION_DURATION: "2",
     };
   });
 
@@ -59,17 +59,17 @@ describe('/api/login', () => {
     process.env = originalEnv;
   });
 
-  it('sets an expiring secure session cookie when credentials are valid', async () => {
+  it("sets an expiring secure session cookie when credentials are valid", async () => {
     const req = {
-      method: 'POST',
+      method: "POST",
       body: {
-        username: 'admin',
-        password: 'super-secret',
+        username: "admin",
+        password: "super-secret",
       },
       headers: {
-        host: 'internal:3000',
-        'x-forwarded-proto': 'https',
-        'x-forwarded-host': 'serp.example.com',
+        host: "internal:3000",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -77,34 +77,34 @@ describe('/api/login', () => {
     await handler(req, res as unknown as NextApiResponse);
 
     expect(mockState.sign).toHaveBeenCalledWith(
-      { user: 'admin' },
-      'jwt-secret',
-      { expiresIn: '2h' },
+      { user: "admin" },
+      "jwt-secret",
+      { expiresIn: "2h" }
     );
     expect(mockState.cookieSet).toHaveBeenCalledWith(
-      'token',
-      'signed-token',
+      "token",
+      "signed-token",
       expect.objectContaining({
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: "lax",
         secure: true,
-        path: '/',
+        path: "/",
         maxAge: 7200000,
-      }),
+      })
     );
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ success: true, error: null });
   });
 
-  it('does not force the secure cookie flag without forwarded https headers', async () => {
+  it("does not force the secure cookie flag without forwarded https headers", async () => {
     const req = {
-      method: 'POST',
+      method: "POST",
       body: {
-        username: 'admin',
-        password: 'super-secret',
+        username: "admin",
+        password: "super-secret",
       },
       headers: {
-        host: 'serp.example.com',
+        host: "serp.example.com",
       },
       socket: {},
     } as unknown as NextApiRequest;
@@ -113,12 +113,76 @@ describe('/api/login', () => {
     await handler(req, res as unknown as NextApiResponse);
 
     expect(mockState.cookieSet).toHaveBeenCalledWith(
-      'token',
-      'signed-token',
+      "token",
+      "signed-token",
       expect.objectContaining({
         secure: false,
-      }),
+      })
     );
     expect(res.statusCode).toBe(200);
+  });
+
+  it("returns a generic auth error for invalid credentials", async () => {
+    const req = {
+      method: "POST",
+      body: {
+        username: "admin",
+        password: "wrong-password",
+      },
+      headers: {
+        host: "serp.example.com",
+      },
+      socket: {},
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.cookieSet).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toEqual({ success: false, error: "Invalid credentials" });
+  });
+
+  it("returns a server error when required auth env vars are missing", async () => {
+    process.env = {
+      USER: "admin",
+      SESSION_DURATION: "2",
+    } as unknown as NodeJS.ProcessEnv;
+
+    const req = {
+      method: "POST",
+      body: {
+        username: "admin",
+        password: "super-secret",
+      },
+      headers: {
+        host: "serp.example.com",
+      },
+      socket: {},
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.sign).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: "Server configuration error",
+    });
+  });
+
+  it("rejects unsupported HTTP methods with 405", async () => {
+    const req = {
+      method: "GET",
+      body: {},
+      headers: {},
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(res.statusCode).toBe(405);
+    expect(res.body).toEqual({ success: false, error: "Method not allowed" });
   });
 });

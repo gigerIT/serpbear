@@ -91,6 +91,31 @@ class RetryQueueManager {
       }
     });
   }
+
+  async removeBatch(keywordIDs: Set<number>): Promise<void> {
+    if (!(keywordIDs instanceof Set) || keywordIDs.size === 0) {
+      return;
+    }
+
+    await this.withLock(async () => {
+      const queue = await this.readQueue();
+      const filtered = queue.filter((id) => !keywordIDs.has(id));
+
+      if (filtered.length !== queue.length) {
+        await this.writeQueue(filtered);
+      }
+    });
+  }
+
+  async getQueue(): Promise<number[]> {
+    return this.withLock(async () => this.readQueue());
+  }
+
+  async clearQueue(): Promise<void> {
+    await this.withLock(async () => {
+      await this.writeQueue([]);
+    });
+  }
 }
 
 export const retryQueueManager = new RetryQueueManager();
