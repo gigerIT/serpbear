@@ -109,7 +109,7 @@ If you want a quick free-tier comparison, keep this as a starting point and veri
 | Service           | Free tier         | Pricing                              | Included usage      | API |
 | ----------------- | ----------------- | ------------------------------------ | ------------------- | --- |
 | hasdata.com       | 1,000 requests/mo | From $49/mo                          | 200,000 requests/mo | Yes |
-| scrapingant.com   | 10,000 credits/mo | From $19/mo                          | 100,000 credits/mo  | Yes |
+| scrapingant.com   | - (not for Google)| From $19/mo                          | 100,000 credits/mo  | Yes |
 | scrapingrobot.com | 5,000 requests/mo | Usage-based from $0.00004/request    | Pay as you go       | Yes |
 | searchapi.io      | 100 requests      | From $40/mo                          | 10,000 searches/mo  | Yes |
 | serpapi.com       | 250 searches/mo   | From $25/mo                          | 1,000 searches/mo   | Yes |
