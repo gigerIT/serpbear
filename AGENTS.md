@@ -35,6 +35,7 @@
 ## Project-Specific Rules
 
 - Prefer TypeScript/TSX for new code. `tsconfig.json` is strict even though `allowJs` is enabled.
+- Comment code whose purpose is not immediately clear or that handles edge cases or other non-obvious behavior, and keep those comments limited to insights that are not obvious from reading the code itself.
 - Keep API access patterns centralized in `services/*.tsx` instead of adding ad hoc component-level fetch code.
 - Many model fields are JSON stored inside string columns, including `history`, `tags`, `lastResult`, and `search_console`. Parse on read, stringify on write.
 - Sensitive values in `data/settings.json` and domain Search Console payloads are encrypted with `Cryptr` using `SECRET`. New secrets need both encryption and decryption paths.
