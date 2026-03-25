@@ -1,8 +1,13 @@
-import { performance } from 'perf_hooks';
-import { setTimeout as sleep } from 'timers/promises';
-import { RefreshResult, removeFromRetryQueue, retryScrape, scrapeKeywordWithStrategy } from './scraper';
-import parseKeywords from './parseKeywords';
-import Keyword from '../database/models/keyword';
+import { performance } from "perf_hooks";
+import { setTimeout as sleep } from "timers/promises";
+import {
+  RefreshResult,
+  removeFromRetryQueue,
+  retryScrape,
+  scrapeKeywordWithStrategy,
+} from "./scraper";
+import parseKeywords from "./parseKeywords";
+import Keyword from "../database/models/keyword";
 
 /**
  * Refreshes the Keywords position by Scraping Google Search Result by
@@ -12,39 +17,63 @@ import Keyword from '../database/models/keyword';
  * @param {DomainType[]} domains - Optional domain list for per-domain strategy overrides
  * @returns {Promise}
  */
-const refreshAndUpdateKeywords = async (rawKeyword:Keyword[], settings:SettingsType, domains?: DomainType[]): Promise<KeywordType[]> => {
-   const keywords:KeywordType[] = rawKeyword.map((el) => el.get({ plain: true }));
-   if (!rawKeyword || rawKeyword.length === 0) { return []; }
-   const start = performance.now();
-   const updatedKeywords: KeywordType[] = [];
+const refreshAndUpdateKeywords = async (
+  rawKeyword: Keyword[],
+  settings: SettingsType,
+  domains?: DomainType[]
+): Promise<KeywordType[]> => {
+  const keywords: KeywordType[] = rawKeyword.map((el) =>
+    el.get({ plain: true })
+  );
+  if (!rawKeyword || rawKeyword.length === 0) {
+    return [];
+  }
+  const start = performance.now();
+  const updatedKeywords: KeywordType[] = [];
 
-   if (['scrapingant', 'serpapi', 'searchapi'].includes(settings.scraper_type)) {
-      const refreshedResults = await refreshParallel(keywords, settings, domains);
-      if (refreshedResults.length > 0) {
-         for (const keyword of rawKeyword) {
-            const refreshedKeywordData = refreshedResults.find((k) => k && k.ID === keyword.ID);
-            if (refreshedKeywordData) {
-               const updatedKeyword = await updateKeywordPosition(keyword, refreshedKeywordData, settings);
-               updatedKeywords.push(updatedKeyword);
-            }
-         }
-      }
-   } else {
+  if (["scrapingant", "serpapi", "searchapi"].includes(settings.scraper_type)) {
+    const refreshedResults = await refreshParallel(keywords, settings, domains);
+    if (refreshedResults.length > 0) {
       for (const keyword of rawKeyword) {
-         console.log('START SCRAPE: ', keyword.keyword);
-         const keywordPlain = keyword.get({ plain: true }) as KeywordType;
-         const domainSettings = domains?.find((d) => d.domain === keywordPlain.domain);
-         const updatedKeyword = await refreshAndUpdateKeyword(keyword, settings, domainSettings);
-         updatedKeywords.push(updatedKeyword);
-         if (keywords.length > 0 && settings.scrape_delay && settings.scrape_delay !== '0') {
-            await sleep(parseInt(settings.scrape_delay, 10));
-         }
+        const refreshedKeywordData = refreshedResults.find(
+          (k) => k && k.ID === keyword.ID
+        );
+        if (refreshedKeywordData) {
+          const updatedKeyword = await updateKeywordPosition(
+            keyword,
+            refreshedKeywordData,
+            settings
+          );
+          updatedKeywords.push(updatedKeyword);
+        }
       }
-   }
+    }
+  } else {
+    for (const keyword of rawKeyword) {
+      console.log("START SCRAPE: ", keyword.keyword);
+      const keywordPlain = keyword.get({ plain: true }) as KeywordType;
+      const domainSettings = domains?.find(
+        (d) => d.domain === keywordPlain.domain
+      );
+      const updatedKeyword = await refreshAndUpdateKeyword(
+        keyword,
+        settings,
+        domainSettings
+      );
+      updatedKeywords.push(updatedKeyword);
+      if (
+        keywords.length > 0 &&
+        settings.scrape_delay &&
+        settings.scrape_delay !== "0"
+      ) {
+        await sleep(parseInt(settings.scrape_delay, 10));
+      }
+    }
+  }
 
-   const end = performance.now();
-   console.log(`time taken: ${end - start}ms`);
-   return updatedKeywords;
+  const end = performance.now();
+  console.log(`time taken: ${end - start}ms`);
+  return updatedKeywords;
 };
 
 /**
@@ -54,11 +83,21 @@ const refreshAndUpdateKeywords = async (rawKeyword:Keyword[], settings:SettingsT
  * @param {DomainType} domainSettings - Optional domain-level settings override
  * @returns {Promise<KeywordType>}
  */
-const refreshAndUpdateKeyword = async (keyword: Keyword, settings: SettingsType, domainSettings?: DomainType): Promise<KeywordType> => {
-   const currentKeyword = keyword.get({ plain: true });
-   const refreshedKeywordData = await scrapeKeywordWithStrategy(currentKeyword, settings, domainSettings);
-   const updatedKeyword = refreshedKeywordData ? await updateKeywordPosition(keyword, refreshedKeywordData, settings) : currentKeyword;
-   return updatedKeyword;
+const refreshAndUpdateKeyword = async (
+  keyword: Keyword,
+  settings: SettingsType,
+  domainSettings?: DomainType
+): Promise<KeywordType> => {
+  const currentKeyword = keyword.get({ plain: true });
+  const refreshedKeywordData = await scrapeKeywordWithStrategy(
+    currentKeyword,
+    settings,
+    domainSettings
+  );
+  const updatedKeyword = refreshedKeywordData
+    ? await updateKeywordPosition(keyword, refreshedKeywordData, settings)
+    : currentKeyword;
+  return updatedKeyword;
 };
 
 /**
@@ -68,53 +107,75 @@ const refreshAndUpdateKeyword = async (keyword: Keyword, settings: SettingsType,
  * @param {SettingsType} settings - The App Settings that contain the Scraper settings
  * @returns {Promise<KeywordType>}
  */
-export const updateKeywordPosition = async (keywordRaw:Keyword, updatedKeyword: RefreshResult, settings: SettingsType): Promise<KeywordType> => {
-   const keywordParsed = parseKeywords([keywordRaw.get({ plain: true })]);
-      const keyword = keywordParsed[0];
-      // const updatedKeyword = refreshed;
-      let updated = keyword;
+export const updateKeywordPosition = async (
+  keywordRaw: Keyword,
+  updatedKeyword: RefreshResult,
+  settings: SettingsType
+): Promise<KeywordType> => {
+  const keywordParsed = parseKeywords([keywordRaw.get({ plain: true })]);
+  const keyword = keywordParsed[0];
+  // const updatedKeyword = refreshed;
+  let updated = keyword;
 
-      if (updatedKeyword && keyword) {
-         const newPos = updatedKeyword.position;
-         const { history } = keyword;
-         const theDate = new Date();
-         const dateKey = `${theDate.getFullYear()}-${theDate.getMonth() + 1}-${theDate.getDate()}`;
-         history[dateKey] = newPos;
+  if (updatedKeyword && keyword) {
+    const newPos = updatedKeyword.position;
+    const { history } = keyword;
+    const theDate = new Date();
+    const dateKey = `${theDate.getFullYear()}-${
+      theDate.getMonth() + 1
+    }-${theDate.getDate()}`;
+    history[dateKey] = newPos;
 
-         const updatedVal = {
-            position: newPos,
-            updating: false,
-            url: updatedKeyword.url,
-            lastResult: updatedKeyword.result,
-            history,
-            lastUpdated: updatedKeyword.error ? keyword.lastUpdated : theDate.toJSON(),
-            lastUpdateError: updatedKeyword.error
-               ? JSON.stringify({ date: theDate.toJSON(), error: `${updatedKeyword.error}`, scraper: settings.scraper_type })
-               : 'false',
-         };
+    const updatedVal = {
+      position: newPos,
+      updating: false,
+      url: updatedKeyword.url,
+      lastResult: updatedKeyword.result,
+      history,
+      lastUpdated: updatedKeyword.error
+        ? keyword.lastUpdated
+        : theDate.toJSON(),
+      lastUpdateError: updatedKeyword.error
+        ? JSON.stringify({
+            date: theDate.toJSON(),
+            error: `${updatedKeyword.error}`,
+            scraper: settings.scraper_type,
+          })
+        : "false",
+    };
 
-         // If failed, Add to Retry Queue Cron
-         if (updatedKeyword.error && settings?.scrape_retry) {
-            await retryScrape(keyword.ID);
-         } else {
-            await removeFromRetryQueue(keyword.ID);
-         }
+    // If failed, Add to Retry Queue Cron
+    if (updatedKeyword.error && settings?.scrape_retry) {
+      await retryScrape(keyword.ID);
+    } else {
+      await removeFromRetryQueue(keyword.ID);
+    }
 
-         // Update the Keyword Position in Database
-         try {
-            await keywordRaw.update({
-               ...updatedVal,
-               lastResult: Array.isArray(updatedKeyword.result) ? JSON.stringify(updatedKeyword.result) : updatedKeyword.result,
-               history: JSON.stringify(history),
-            });
-            console.log('[SUCCESS] Updating the Keyword: ', keyword.keyword);
-            updated = { ...keyword, ...updatedVal, lastUpdateError: JSON.parse(updatedVal.lastUpdateError) };
-         } catch (error) {
-            console.log('[ERROR] Updating SERP for Keyword', keyword.keyword, error);
-         }
-      }
+    // Update the Keyword Position in Database
+    try {
+      await keywordRaw.update({
+        ...updatedVal,
+        lastResult: Array.isArray(updatedKeyword.result)
+          ? JSON.stringify(updatedKeyword.result)
+          : updatedKeyword.result,
+        history: JSON.stringify(history),
+      });
+      console.log(
+        `[SUCCESS] Updating the Keyword: ${
+          keyword.keyword
+        } | foundPosition=${newPos} | url="${updatedKeyword.url || ""}"`
+      );
+      updated = {
+        ...keyword,
+        ...updatedVal,
+        lastUpdateError: JSON.parse(updatedVal.lastUpdateError),
+      };
+    } catch (error) {
+      console.log("[ERROR] Updating SERP for Keyword", keyword.keyword, error);
+    }
+  }
 
-      return updated;
+  return updated;
 };
 
 /**
@@ -124,19 +185,25 @@ export const updateKeywordPosition = async (keywordRaw:Keyword, updatedKeyword: 
  * @param {DomainType[]} domains - Optional domain list for per-domain strategy overrides
  * @returns {Promise}
  */
-const refreshParallel = async (keywords:KeywordType[], settings:SettingsType, domains?: DomainType[]) : Promise<RefreshResult[]> => {
-   const promises: Promise<RefreshResult>[] = keywords.map((keyword) => {
-      const domainSettings = domains?.find((d) => d.domain === keyword.domain);
-      return scrapeKeywordWithStrategy(keyword, settings, domainSettings);
-   });
+const refreshParallel = async (
+  keywords: KeywordType[],
+  settings: SettingsType,
+  domains?: DomainType[]
+): Promise<RefreshResult[]> => {
+  const promises: Promise<RefreshResult>[] = keywords.map((keyword) => {
+    const domainSettings = domains?.find((d) => d.domain === keyword.domain);
+    return scrapeKeywordWithStrategy(keyword, settings, domainSettings);
+  });
 
-   return Promise.all(promises).then((promiseData) => {
-      console.log('ALL DONE!!!');
+  return Promise.all(promises)
+    .then((promiseData) => {
+      console.log("ALL DONE!!!");
       return promiseData;
-   }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       return [];
-   });
+    });
 };
 
 export default refreshAndUpdateKeywords;

@@ -105,6 +105,25 @@ const logScrapeError = (
   );
 };
 
+const logScrapeSuccess = (
+  context: string,
+  details: {
+    keyword: KeywordType;
+    position: number;
+    url: string;
+    strategy?: ScrapeStrategy;
+  }
+): void => {
+  const { keyword, position, url, strategy } = details;
+  console.log(
+    `[SERP] ${context}: keyword="${keyword.keyword}" | domain="${
+      keyword.domain
+    }" | foundPosition=${position} | url="${url || ""}"${
+      strategy ? ` | strategy=${strategy}` : ""
+    }`
+  );
+};
+
 /**
  * Creates a SERP Scraper client promise based on the app settings.
  * @param {KeywordType} keyword - the keyword to get the SERP for.
@@ -411,13 +430,12 @@ export const scrapeKeywordWithStrategy = async (
   const finalSerp = getSerp(keyword.domain, allScrapedResults);
   const fullResults = buildFullResults(allScrapedResults);
 
-  console.log(
-    "[SERP]:",
-    keyword.keyword,
-    finalSerp.position,
-    finalSerp.url,
-    `(strategy: ${strategy})`
-  );
+  logScrapeSuccess("Keyword scraped", {
+    keyword,
+    position: finalSerp.position,
+    url: finalSerp.url,
+    strategy,
+  });
   return {
     ID: keyword.ID,
     keyword: keyword.keyword,
@@ -493,7 +511,11 @@ export const scrapeKeywordFromGoogle = async (
         result: extracted,
         error: false,
       };
-      console.log("[SERP]: ", keyword.keyword, serp.position, serp.url);
+      logScrapeSuccess("Keyword scraped", {
+        keyword,
+        position: serp.position,
+        url: serp.url,
+      });
     } else {
       scraperError = res.detail || res.error || "Unknown Error";
       throw new Error(
