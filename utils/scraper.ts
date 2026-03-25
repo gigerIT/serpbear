@@ -30,6 +30,81 @@ export type RefreshResult =
 const TOTAL_PAGES = 10;
 const PAGE_SIZE = 10;
 
+const stringifyErrorDetails = (details: unknown): string => {
+  if (!details) {
+    return "";
+  }
+
+  if (typeof details === "string") {
+    return details;
+  }
+
+  if (details instanceof Error) {
+    return details.message;
+  }
+
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return String(details);
+  }
+};
+
+const getErrorMessage = (error: any): string => {
+  if (!error) {
+    return "Unknown error";
+  }
+
+  const responseData = error.response?.data;
+  const messageParts = [
+    error.message,
+    error.response?.status
+      ? `HTTP ${error.response.status}${
+          error.response?.statusText ? ` ${error.response.statusText}` : ""
+        }`
+      : "",
+    responseData?.detail,
+    responseData?.error,
+    stringifyErrorDetails(responseData),
+  ].filter(Boolean);
+
+  if (messageParts.length > 0) {
+    return [...new Set(messageParts)].join(" | ");
+  }
+
+  return stringifyErrorDetails(error) || "Unknown error";
+};
+
+const logScrapeError = (
+  context: string,
+  details: {
+    keyword: KeywordType;
+    scraperType: string;
+    scraperObj?: ScraperSettings;
+    page?: number;
+    pagination?: ScraperPagination;
+    extra?: Record<string, unknown>;
+  },
+  error: unknown
+): void => {
+  const { keyword, scraperType, scraperObj, page, pagination, extra } = details;
+  console.log(
+    `[ERROR] ${context}: ${getErrorMessage(error)} | keyword="${
+      keyword.keyword
+    }" | domain="${keyword.domain}" | device="${
+      keyword.device
+    }" | scraperType="${scraperType || "unknown"}" | scraper="${
+      scraperObj?.name || scraperObj?.id || "unknown"
+    }"${typeof page === "number" ? ` | page=${page}` : ""}${
+      pagination ? ` | start=${pagination.start} | num=${pagination.num}` : ""
+    }${
+      extra && Object.keys(extra).length > 0
+        ? ` | extra=${stringifyErrorDetails(extra)}`
+        : ""
+    }`
+  );
+};
+
 /**
  * Creates a SERP Scraper client promise based on the app settings.
  * @param {KeywordType} keyword - the keyword to get the SERP for.
@@ -161,12 +236,16 @@ const scrapeSinglePage = async (
       }));
     }
   } catch (error: any) {
-    console.log(
-      "[ERROR] Scraping page",
-      pagination.page,
-      "for keyword:",
-      keyword.keyword,
-      error?.message || ""
+    logScrapeError(
+      "Scraping page failed",
+      {
+        keyword,
+        scraperType,
+        scraperObj,
+        page: pagination.page,
+        pagination,
+      },
+      error
     );
   }
   return [];
@@ -417,7 +496,18 @@ export const scrapeKeywordFromGoogle = async (
       console.log("[SERP]: ", keyword.keyword, serp.position, serp.url);
     } else {
       scraperError = res.detail || res.error || "Unknown Error";
-      throw new Error(res);
+      throw new Error(
+        `Scraper response did not include usable result content: ${stringifyErrorDetails(
+          {
+            detail: res?.detail,
+            error: res?.error,
+            hasData: Boolean(res?.data),
+            hasHtml: Boolean(res?.html),
+            hasResults: Boolean(res?.results),
+            resultObjectKey: scraperObj?.resultObjectKey || null,
+          }
+        )}`
+      );
     }
   } catch (error: any) {
     refreshedResults.error = scraperError || "Unknown Error";
@@ -429,18 +519,24 @@ export const scrapeKeywordFromGoogle = async (
     ) {
       refreshedResults.error = `[${error.response.status}] ${error.response.statusText}`;
     } else if (settings.scraper_type === "proxy" && error) {
-      refreshedResults.error = error;
+      refreshedResults.error = getErrorMessage(error);
     }
 
-    console.log("[ERROR] Scraping Keyword : ", keyword.keyword);
-    if (!(error && error.response && error.response.statusText)) {
-      console.log("[ERROR_MESSAGE]: ", JSON.stringify(error));
-    } else {
-      console.log(
-        "[ERROR_MESSAGE]: ",
-        error && error.response && error.response.statusText
-      );
-    }
+    logScrapeError(
+      "Scraping keyword failed",
+      {
+        keyword,
+        scraperType,
+        scraperObj,
+        page: nativePagination.page,
+        pagination: nativePagination,
+        extra: {
+          scraperError,
+          resultObjectKey: scraperObj?.resultObjectKey || null,
+        },
+      },
+      error
+    );
   }
 
   return refreshedResults;
