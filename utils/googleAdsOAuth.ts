@@ -1,6 +1,6 @@
-import { OAuth2Client } from "google-auth-library";
+import { OAuth2Client } from 'google-auth-library';
 
-const GOOGLE_ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
+const GOOGLE_ADS_SCOPE = 'https://www.googleapis.com/auth/adwords';
 
 type GoogleAdsAuthUrlOptions = {
   clientID: string;
@@ -28,8 +28,8 @@ export const getGoogleAdsAuthURL = ({
     redirectURL,
   });
   return client.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
+    access_type: 'offline',
+    prompt: 'consent',
     include_granted_scopes: true,
     scope: [GOOGLE_ADS_SCOPE],
     state,

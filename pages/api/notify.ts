@@ -1,12 +1,12 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import nodeMailer from "nodemailer";
-import db from "../../database/database";
-import Domain from "../../database/models/domain";
-import Keyword from "../../database/models/keyword";
-import generateEmail from "../../utils/generateEmail";
-import parseKeywords from "../../utils/parseKeywords";
-import { getAppSettings } from "./settings";
-import verifyUser from "../../utils/verifyUser";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import nodeMailer from 'nodemailer';
+import db from '../../database/database';
+import Domain from '../../database/models/domain';
+import Keyword from '../../database/models/keyword';
+import generateEmail from '../../utils/generateEmail';
+import parseKeywords from '../../utils/parseKeywords';
+import { getAppSettings } from './settings';
+import verifyUser from '../../utils/verifyUser';
 
 type NotifyResponse = {
   success?: boolean;
@@ -15,36 +15,36 @@ type NotifyResponse = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   const authorized = verifyUser(req, res);
-  if (authorized !== "authorized") {
+  if (authorized !== 'authorized') {
     return res.status(401).json({ error: authorized });
   }
-  if (req.method === "POST") {
+  if (req.method === 'POST') {
     await db.sync();
     return notify(req, res);
   }
-  return res.status(401).json({ success: false, error: "Invalid Method" });
+  return res.status(401).json({ success: false, error: 'Invalid Method' });
 }
 
 const notify = async (
   req: NextApiRequest,
-  res: NextApiResponse<NotifyResponse>
+  res: NextApiResponse<NotifyResponse>,
 ) => {
-  const reqDomain = (req?.query?.domain as string) || "";
+  const reqDomain = (req?.query?.domain as string) || '';
   try {
     const settings = await getAppSettings();
     const {
-      smtp_server = "",
-      smtp_port = "",
-      notification_email = "",
+      smtp_server = '',
+      smtp_port = '',
+      notification_email = '',
     } = settings;
 
     if (!smtp_server || !smtp_port || !notification_email) {
       return res
         .status(401)
-        .json({ success: false, error: "SMTP has not been setup properly!" });
+        .json({ success: false, error: 'SMTP has not been setup properly!' });
     }
 
     if (reqDomain) {
@@ -69,26 +69,26 @@ const notify = async (
     console.log(error);
     return res
       .status(401)
-      .json({ success: false, error: "Error Sending Notification Email." });
+      .json({ success: false, error: 'Error Sending Notification Email.' });
   }
 };
 
 const sendNotificationEmail = async (
   domain: Domain,
-  settings: SettingsType
+  settings: SettingsType,
 ) => {
   const {
-    smtp_server = "",
-    smtp_port = "",
-    smtp_username = "",
-    smtp_password = "",
-    notification_email = "",
-    notification_email_from = "",
-    notification_email_from_name = "SerpBear",
+    smtp_server = '',
+    smtp_port = '',
+    smtp_username = '',
+    smtp_password = '',
+    notification_email = '',
+    notification_email_from = '',
+    notification_email_from_name = 'SerpBear',
   } = settings;
 
   const fromEmail = `${notification_email_from_name} <${
-    notification_email_from || "no-reply@serpbear.com"
+    notification_email_from || 'no-reply@serpbear.com'
   }>`;
   const mailerSettings: any = {
     host: smtp_server,
@@ -115,9 +115,9 @@ const sendNotificationEmail = async (
     })
     .catch((err: any) =>
       console.log(
-        "[ERROR] Sending Notification Email for",
+        '[ERROR] Sending Notification Email for',
         domainName,
-        err?.response || err
-      )
+        err?.response || err,
+      ),
     );
 };

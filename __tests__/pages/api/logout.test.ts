@@ -1,22 +1,22 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 const mockState = {
-  verifyUser: jest.fn(() => "authorized"),
+  verifyUser: jest.fn(() => 'authorized'),
   cookieSet: jest.fn(),
 };
 
-jest.mock("../../../utils/verifyUser", () => ({
+jest.mock('../../../utils/verifyUser', () => ({
   __esModule: true,
   default: (...args: any[]) => (mockState.verifyUser as any)(...args),
 }));
 
-jest.mock("cookies", () =>
+jest.mock('cookies', () =>
   jest.fn().mockImplementation(() => ({
     set: mockState.cookieSet,
-  }))
+  })),
 );
 
-const handler = require("../../../pages/api/logout").default;
+const handler = require('../../../pages/api/logout').default;
 
 type MockResponse = {
   statusCode: number;
@@ -42,14 +42,14 @@ const createResponse = () => {
   return res;
 };
 
-describe("/api/logout", () => {
-  it("expires the session cookie with matching security attributes", async () => {
+describe('/api/logout', () => {
+  it('expires the session cookie with matching security attributes', async () => {
     const req = {
-      method: "POST",
+      method: 'POST',
       headers: {
-        host: "internal:3000",
-        "x-forwarded-proto": "https",
-        "x-forwarded-host": "serp.example.com",
+        host: 'internal:3000',
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'serp.example.com',
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -57,14 +57,14 @@ describe("/api/logout", () => {
     await handler(req, res as unknown as NextApiResponse);
 
     expect(mockState.cookieSet).toHaveBeenCalledWith(
-      "token",
+      'token',
       undefined,
       expect.objectContaining({
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: 'lax',
         secure: true,
-        path: "/",
-      })
+        path: '/',
+      }),
     );
     expect(mockState.cookieSet.mock.calls[0][2].maxAge).toBeUndefined();
     expect(res.statusCode).toBe(200);

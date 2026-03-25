@@ -1,26 +1,26 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { readFile, writeFile } from "fs/promises";
-import Cookies from "cookies";
-import Cryptr from "cryptr";
-import db from "../../database/database";
-import verifyUser from "../../utils/verifyUser";
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { readFile, writeFile } from 'fs/promises';
+import Cookies from 'cookies';
+import Cryptr from 'cryptr';
+import db from '../../database/database';
+import verifyUser from '../../utils/verifyUser';
 import {
   clearAdwordsAccessTokenCache,
   getAdwordsCredentials,
   getAdwordsKeywordIdeas,
-} from "../../utils/adwords";
+} from '../../utils/adwords';
 import getGoogleAdsRedirectURL, {
   getRequestOrigin,
-} from "../../utils/getGoogleAdsRedirectURL";
-import { getGoogleAdsOAuthClient } from "../../utils/googleAdsOAuth";
+} from '../../utils/getGoogleAdsRedirectURL';
+import { getGoogleAdsOAuthClient } from '../../utils/googleAdsOAuth';
 
-const ADWORDS_OAUTH_STATE_COOKIE = "adwords_oauth_state";
+const ADWORDS_OAUTH_STATE_COOKIE = 'adwords_oauth_state';
 
 const getAdwordsOAuthStateCookieOptions = (req: NextApiRequest) => ({
   httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/api/adwords",
-  secure: getRequestOrigin(req).startsWith("https://"),
+  sameSite: 'lax' as const,
+  path: '/api/adwords',
+  secure: getRequestOrigin(req).startsWith('https://'),
 });
 
 type adwordsValidateResp = {
@@ -30,35 +30,35 @@ type adwordsValidateResp = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   await db.sync();
   // Skip auth check for OAuth callback from Google (GET with code param).
   // The code exchange is secured server-side via client_secret.
   // This prevents 401 errors when cookies aren't sent on cross-origin redirects.
-  if (req.method === "GET" && req.query.code) {
+  if (req.method === 'GET' && req.query.code) {
     return getAdwordsRefreshToken(req, res);
   }
   const authorized = verifyUser(req, res);
-  if (authorized !== "authorized") {
+  if (authorized !== 'authorized') {
     return res.status(401).json({ error: authorized });
   }
-  if (req.method === "GET") {
+  if (req.method === 'GET') {
     return getAdwordsRefreshToken(req, res);
   }
-  if (req.method === "POST") {
+  if (req.method === 'POST') {
     return validateAdwordsIntegration(req, res);
   }
-  return res.status(502).json({ error: "Unrecognized Route." });
+  return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
 const getAdwordsRefreshToken = async (
   req: NextApiRequest,
-  res: NextApiResponse<string>
+  res: NextApiResponse<string>,
 ) => {
   try {
-    const code = typeof req.query.code === "string" ? req.query.code : "";
-    const state = typeof req.query.state === "string" ? req.query.state : "";
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const state = typeof req.query.state === 'string' ? req.query.state : '';
     const redirectURL = getGoogleAdsRedirectURL(req);
     const cookies = new Cookies(req, res);
 
@@ -68,21 +68,21 @@ const getAdwordsRefreshToken = async (
         cookies.set(
           ADWORDS_OAUTH_STATE_COOKIE,
           undefined,
-          getAdwordsOAuthStateCookieOptions(req)
+          getAdwordsOAuthStateCookieOptions(req),
         );
         return res
           .status(401)
-          .send("Invalid or expired Google Ads OAuth state. Please Try Again!");
+          .send('Invalid or expired Google Ads OAuth state. Please Try Again!');
       }
       cookies.set(
         ADWORDS_OAUTH_STATE_COOKIE,
         undefined,
-        getAdwordsOAuthStateCookieOptions(req)
+        getAdwordsOAuthStateCookieOptions(req),
       );
       try {
         const settingsRaw = await readFile(
           `${process.cwd()}/data/settings.json`,
-          { encoding: "utf-8" }
+          { encoding: 'utf-8' },
         );
         const settings: SettingsType = settingsRaw
           ? JSON.parse(settingsRaw)
@@ -90,10 +90,10 @@ const getAdwordsRefreshToken = async (
         const cryptr = new Cryptr(process.env.SECRET as string);
         const adwords_client_id = settings.adwords_client_id
           ? cryptr.decrypt(settings.adwords_client_id)
-          : "";
+          : '';
         const adwords_client_secret = settings.adwords_client_secret
           ? cryptr.decrypt(settings.adwords_client_secret)
-          : "";
+          : '';
         const oAuth2Client = getGoogleAdsOAuthClient({
           clientID: adwords_client_id,
           clientSecret: adwords_client_secret,
@@ -105,78 +105,76 @@ const getAdwordsRefreshToken = async (
           await writeFile(
             `${process.cwd()}/data/settings.json`,
             JSON.stringify({ ...settings, adwords_refresh_token }),
-            { encoding: "utf-8" }
+            { encoding: 'utf-8' },
           );
           clearAdwordsAccessTokenCache();
           return res
             .status(200)
             .send(
-              "Google Ads Integrated Successfully! You can close this window."
+              'Google Ads Integrated Successfully! You can close this window.',
             );
         }
         console.log(
-          "[Error] Google Ads OAuth completed without refresh token.",
+          '[Error] Google Ads OAuth completed without refresh token.',
           {
             redirectURL,
             hasAccessToken: !!r?.tokens?.access_token,
             tokenKeys: r?.tokens ? Object.keys(r.tokens) : [],
-          }
+          },
         );
         return res
           .status(400)
           .send(
-            "Error Getting the Google Ads Refresh Token. Please Try Again!"
+            'Error Getting the Google Ads Refresh Token. Please Try Again!',
           );
       } catch (error: any) {
-        const errorMsg =
-          typeof error?.response?.data?.error === "string"
+        const errorMsg = typeof error?.response?.data?.error === 'string'
             ? error.response.data.error
-            : "";
-        const errorDetails = errorMsg ? `. Details: ${errorMsg}` : "";
-        const mismatchDetails = errorMsg.includes("redirect_uri_mismatch")
+            : '';
+        const errorDetails = errorMsg ? `. Details: ${errorMsg}` : '';
+        const mismatchDetails = errorMsg.includes('redirect_uri_mismatch')
           ? ` Redirected URL: ${redirectURL}`
-          : "";
+          : '';
         console.log(
-          "[Error] Getting Google Ads Refresh Token! Reason: ",
-          `${errorMsg}${mismatchDetails}`
+          '[Error] Getting Google Ads Refresh Token! Reason: ',
+          `${errorMsg}${mismatchDetails}`,
         );
         return res
           .status(400)
           .send(
-            `Error Saving the Google Ads Refresh Token${errorDetails}${mismatchDetails}. Please Try Again!`
+            `Error Saving the Google Ads Refresh Token${errorDetails}${mismatchDetails}. Please Try Again!`,
           );
       }
     } else {
       return res
         .status(400)
-        .send("No Code Provided By Google. Please Try Again!");
+        .send('No Code Provided By Google. Please Try Again!');
     }
   } catch (error) {
-    console.log("[ERROR] Getting Google Ads Refresh Token: ", error);
+    console.log('[ERROR] Getting Google Ads Refresh Token: ', error);
     return res
       .status(400)
-      .send("Error Getting Google Ads Refresh Token. Please Try Again!");
+      .send('Error Getting Google Ads Refresh Token. Please Try Again!');
   }
 };
 
 const validateAdwordsIntegration = async (
   req: NextApiRequest,
-  res: NextApiResponse<adwordsValidateResp>
+  res: NextApiResponse<adwordsValidateResp>,
 ) => {
-  const errMsg =
-    "Error Validating Google Ads Integration. Please make sure your provided data are correct!";
+  const errMsg = 'Error Validating Google Ads Integration. Please make sure your provided data are correct!';
   const { developer_token, account_id } = req.body;
   if (!developer_token || !account_id) {
     return res.status(400).json({
       valid: false,
       error:
-        "Please Provide the Google Ads Developer Token and Test Account ID",
+        'Please Provide the Google Ads Developer Token and Test Account ID',
     });
   }
   try {
     // Save the Adwords Developer Token & Google Ads Test Account ID in App Settings
     const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, {
-      encoding: "utf-8",
+      encoding: 'utf-8',
     });
     const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
     const cryptr = new Cryptr(process.env.SECRET as string);
@@ -190,29 +188,29 @@ const validateAdwordsIntegration = async (
     await writeFile(
       `${process.cwd()}/data/settings.json`,
       JSON.stringify(securedSettings),
-      { encoding: "utf-8" }
+      { encoding: 'utf-8' },
     );
 
     // Make a test Request to Google Ads
     const adwordsCreds = await getAdwordsCredentials();
     const { client_id, client_secret, refresh_token } = adwordsCreds || {};
     if (
-      adwordsCreds &&
-      client_id &&
-      client_secret &&
-      developer_token &&
-      account_id &&
-      refresh_token
+      adwordsCreds
+      && client_id
+      && client_secret
+      && developer_token
+      && account_id
+      && refresh_token
     ) {
       const keywords = await getAdwordsKeywordIdeas(
         adwordsCreds,
         {
-          country: "US",
-          language: "1000",
-          keywords: ["compress"],
-          seedType: "custom",
+          country: 'US',
+          language: '1000',
+          keywords: ['compress'],
+          seedType: 'custom',
         },
-        true
+        true,
       );
       if (keywords && Array.isArray(keywords) && keywords.length > 0) {
         return res.status(200).json({ valid: true });
@@ -220,7 +218,7 @@ const validateAdwordsIntegration = async (
     }
     return res.status(400).json({ valid: false, error: errMsg });
   } catch (error) {
-    console.log("[ERROR] Validating Google Ads Integration: ", error);
+    console.log('[ERROR] Validating Google Ads Integration: ', error);
     return res.status(400).json({ valid: false, error: errMsg });
   }
 };

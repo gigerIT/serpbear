@@ -1,26 +1,26 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
 const mockState = {
   getToken: jest.fn(),
 };
 
-jest.mock("cookies", () =>
+jest.mock('cookies', () =>
   jest.fn().mockImplementation(() => ({
     get: (name: string) => mockState.getToken(name),
-  }))
+  })),
 );
 
-const verifyUser = require("../../utils/verifyUser").default;
+const verifyUser = require('../../utils/verifyUser').default;
 
-describe("verifyUser", () => {
+describe('verifyUser', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = {
       ...originalEnv,
-      SECRET: "jwt-secret",
-      APIKEY: "test-api-key",
+      SECRET: 'jwt-secret',
+      APIKEY: 'test-api-key',
     };
   });
 
@@ -28,8 +28,8 @@ describe("verifyUser", () => {
     process.env = originalEnv;
   });
 
-  it("rejects expired JWT session cookies", () => {
-    const expiredToken = jwt.sign({ user: "admin" }, "jwt-secret", {
+  it('rejects expired JWT session cookies', () => {
+    const expiredToken = jwt.sign({ user: 'admin' }, 'jwt-secret', {
       expiresIn: -1,
     });
     mockState.getToken.mockReturnValue(expiredToken);
@@ -37,12 +37,12 @@ describe("verifyUser", () => {
     const result = verifyUser(
       {
         headers: {},
-        method: "GET",
-        url: "/api/domains",
+        method: 'GET',
+        url: '/api/domains',
       },
-      {}
+      {},
     );
 
-    expect(result).toBe("Not authorized");
+    expect(result).toBe('Not authorized');
   });
 });
