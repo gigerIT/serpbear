@@ -11,6 +11,12 @@ import {
 } from "../../utils/searchConsole";
 import { removeFromRetryQueue } from "../../utils/scraper";
 import { normalizeDomainInput } from "../../utils/client/validators";
+import {
+  buildPersistedScraperSettings,
+  maskDomainScraperSettings,
+  parseDomainScraperSettings,
+} from "../../utils/domainScraperSettings";
+import safeJsonParse from "../../utils/safeJsonParse";
 
 const toDomainSlug = (value: string): string =>
   value.replace(/-/g, "_").replace(/\./g, "-").replace(/\//g, "-");
@@ -33,7 +39,7 @@ type DomainsDeleteRes = {
 };
 
 type DomainsUpdateRes = {
-  domain: Domain | null;
+  domain: DomainType | null;
   error?: string | null;
 };
 
@@ -71,9 +77,12 @@ export const getDomains = async (
     const formattedDomains: DomainType[] = allDomains.map((el) => {
       const domainItem: DomainType = el.get({ plain: true });
       const scData = domainItem?.search_console
-        ? JSON.parse(domainItem.search_console)
+        ? safeJsonParse<Record<string, string> | null>(
+            domainItem.search_console,
+            {}
+          )
         : {};
-      const { client_email, private_key } = scData;
+      const { client_email, private_key } = scData || {};
       const searchConsoleData = scData
         ? {
             ...scData,
@@ -84,6 +93,9 @@ export const getDomains = async (
       return {
         ...domainItem,
         search_console: JSON.stringify(searchConsoleData),
+        scraper_settings: maskDomainScraperSettings(
+          parseDomainScraperSettings(domainItem.scraper_settings)
+        ),
       };
     });
     const theDomains: DomainType[] = withStats
@@ -197,6 +209,7 @@ export const updateDomain = async (
     notification_interval,
     notification_emails,
     search_console,
+    scraper_settings,
     scrape_strategy,
     scrape_pagination_limit,
     scrape_smart_full_fallback,
@@ -230,16 +243,71 @@ export const updateDomain = async (
         ? cryptr.encrypt(search_console.private_key.trim())
         : "";
     }
+    if (
+      Object.prototype.hasOwnProperty.call(req.body, "scraper_settings") &&
+      !process.env.SECRET
+    ) {
+      return res.status(500).json({
+        domain: null,
+        error: "Server configuration error",
+      });
+    }
+
     if (domainToUpdate) {
+      const existingScraperSettings = parseDomainScraperSettings(
+        domainToUpdate.get("scraper_settings")
+      );
+      let persistedScraperSettings: string | null | undefined;
+
+      if (Object.prototype.hasOwnProperty.call(req.body, "scraper_settings")) {
+        const cryptr = new Cryptr(process.env.SECRET as string);
+        const nextScraperSettings = buildPersistedScraperSettings(
+          scraper_settings ?? null,
+          existingScraperSettings,
+          cryptr
+        );
+        persistedScraperSettings = nextScraperSettings
+          ? JSON.stringify(nextScraperSettings)
+          : null;
+      }
+
       domainToUpdate.set({
         notification_interval,
         notification_emails,
         search_console: JSON.stringify(search_console),
+        ...(persistedScraperSettings !== undefined && {
+          scraper_settings: persistedScraperSettings,
+        }),
         scrape_strategy: scrape_strategy || "",
         scrape_pagination_limit: scrape_pagination_limit || 0,
         scrape_smart_full_fallback: !!scrape_smart_full_fallback,
       });
       await domainToUpdate.save();
+
+      const plainDomain = domainToUpdate.get({ plain: true }) as DomainType;
+      const scData = plainDomain?.search_console
+        ? safeJsonParse<Record<string, string> | null>(
+            plainDomain.search_console,
+            {}
+          )
+        : {};
+      const { client_email, private_key } = scData || {};
+      const searchConsoleData = scData
+        ? {
+            ...scData,
+            client_email: client_email ? "true" : "",
+            private_key: private_key ? "true" : "",
+          }
+        : {};
+      return res.status(200).json({
+        domain: {
+          ...plainDomain,
+          search_console: JSON.stringify(searchConsoleData),
+          scraper_settings: maskDomainScraperSettings(
+            parseDomainScraperSettings(plainDomain.scraper_settings)
+          ),
+        },
+      });
     }
     return res.status(200).json({ domain: domainToUpdate });
   } catch (error) {

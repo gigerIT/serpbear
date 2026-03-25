@@ -1,5 +1,11 @@
 jest.mock("../..//database/models/keyword", () => ({}));
 
+jest.mock("cryptr", () =>
+  jest.fn().mockImplementation(() => ({
+    decrypt: (value: string) => `decrypted-${value}`,
+  }))
+);
+
 const mockState = {
   scrapeKeywordWithStrategy: jest.fn(),
   retryScrape: jest.fn(),
@@ -24,6 +30,7 @@ describe("refresh hardening", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.SECRET = "test-secret";
   });
 
   it("clears updating state when sequential scraping returns no data", async () => {
@@ -138,6 +145,64 @@ describe("refresh hardening", () => {
     expect(results[1].updating).toBe(false);
     expect(results[1].lastUpdateError).toEqual(
       expect.objectContaining({ error: "Parallel scrape returned no data" })
+    );
+  });
+
+  it("applies per-domain scraper overrides before scraping", async () => {
+    const keywordModel = {
+      ID: 31,
+      get: jest.fn().mockReturnValue({
+        ID: 31,
+        keyword: "override keyword",
+        domain: "override.com",
+        device: "desktop",
+        country: "US",
+        lastUpdated: "",
+        added: "",
+        position: 0,
+        volume: 0,
+        sticky: false,
+        history: "{}",
+        lastResult: "[]",
+        url: "",
+        tags: "[]",
+        updating: true,
+        lastUpdateError: "false",
+      }),
+      update: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    mockState.scrapeKeywordWithStrategy.mockResolvedValue({
+      ID: 31,
+      keyword: "override keyword",
+      position: 1,
+      url: "https://override.com",
+      result: [],
+      error: false,
+    });
+
+    await refreshAndUpdateKeywords(
+      [keywordModel],
+      settings as any,
+      [
+        {
+          domain: "override.com",
+          scraper_settings: JSON.stringify({
+            scraper_type: "proxy",
+            scraping_api: "enc-key",
+          }),
+        },
+      ] as any
+    );
+
+    expect(mockState.scrapeKeywordWithStrategy).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: "override.com" }),
+      expect.objectContaining({
+        scraper_type: "proxy",
+        scraping_api: "decrypted-enc-key",
+        scaping_api: "decrypted-enc-key",
+      }),
+      expect.objectContaining({ domain: "override.com" })
     );
   });
 });

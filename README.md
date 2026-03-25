@@ -19,6 +19,19 @@ This fork is used for client projects and maintained with production use in mind
 - **Faithful to the original project:** Self-hosted rank tracking, keyword research, notifications, and integrations remain the core focus.
 - **Built with respect for the original work:** This fork exists to continue and support the project for teams that depend on it.
 
+## Additional Improvements Compared To Upstream
+
+- **Modern runtime and dependencies:** Updated to current Next.js, React, TypeScript, and SQLite tooling for ongoing compatibility and maintenance.
+- **Smarter scraping strategy:** Supports basic, custom, and smart multi-page scraping, including page-1 coverage in smart mode so rankings beyond the first page are less likely to be missed.
+- **Per-domain scraping controls:** Domain-level scrape strategy overrides let you tune pagination behavior per tracked site.
+- **Safer auth flows:** Login and API-key handling are hardened with better method handling, safer credential checks, and stricter Bearer-token parsing.
+- **More resilient settings handling:** Settings reads and writes now tolerate missing files, malformed JSON, and misconfiguration better, with atomic writes for runtime state.
+- **Refresh coordination:** Manual refreshes avoid overlapping work on the same domain, reducing duplicate runs and SQLite contention.
+- **Retry queue hardening:** Failed keyword retries use lock-protected queue updates with safer batch operations and cleanup paths.
+- **Better domain normalization:** Domain input is cleaned and deduplicated more consistently to avoid duplicate or malformed domain entries.
+- **Improved observability:** Targeted API routes now include lightweight request logging and request IDs for easier troubleshooting.
+- **Performance-focused database indexes:** Additional indexes speed up common keyword, domain, and refresh lookups.
+
 ## What You Get
 
 - Track Google keyword positions for your domains.
@@ -106,18 +119,18 @@ SerpBear can use your own proxies or these built-in integrations:
 
 If you want a quick free-tier comparison, keep this as a starting point and verify current limits on each provider's site before choosing one:
 
-| Service           | Free tier         | Pricing                              | Included usage      | API |
-| ----------------- | ----------------- | ------------------------------------ | ------------------- | --- |
-| hasdata.com       | 1,000 requests/mo | From $49/mo                          | 200,000 requests/mo | Yes |
-| scrapingant.com   | - (not for Google)| From $19/mo                          | 100,000 credits/mo  | Yes |
-| scrapingrobot.com | 5,000 requests/mo | Usage-based from $0.00004/request    | Pay as you go       | Yes |
-| searchapi.io      | 100 requests      | From $40/mo                          | 10,000 searches/mo  | Yes |
-| serpapi.com       | 250 searches/mo   | From $25/mo                          | 1,000 searches/mo   | Yes |
-| serper.dev        | 2,500 queries     | Usage-based from $0.30/1,000 queries | Pay as you go       | Yes |
-| serply.io         | 300 requests/mo   | From $50/mo                          | 50,000 requests/mo  | Yes |
-| spaceserp.com     | -                 | From $14.99/mo                       | 1,000 searches/mo   | Yes |
-| valueserp.com     | Free trial        | From $50/mo                          | 25,000 credits/mo   | Yes |
-| crazyserp.com     | -                 | From $50/mo                          | 25,000 credits/mo   | Yes |
+| Service           | Free tier          | Pricing                              | Included usage      | API |
+| ----------------- | ------------------ | ------------------------------------ | ------------------- | --- |
+| hasdata.com       | 1,000 requests/mo  | From $49/mo                          | 200,000 requests/mo | Yes |
+| scrapingant.com   | - (not for Google) | From $19/mo                          | 100,000 credits/mo  | Yes |
+| scrapingrobot.com | 5,000 requests/mo  | Usage-based from $0.00004/request    | Pay as you go       | Yes |
+| searchapi.io      | 100 requests       | From $40/mo                          | 10,000 searches/mo  | Yes |
+| serpapi.com       | 250 searches/mo    | From $25/mo                          | 1,000 searches/mo   | Yes |
+| serper.dev        | 2,500 queries      | Usage-based from $0.30/1,000 queries | Pay as you go       | Yes |
+| serply.io         | 300 requests/mo    | From $50/mo                          | 50,000 requests/mo  | Yes |
+| spaceserp.com     | -                  | From $14.99/mo                       | 1,000 searches/mo   | Yes |
+| valueserp.com     | Free trial         | From $50/mo                          | 25,000 credits/mo   | Yes |
+| crazyserp.com     | -                  | From $50/mo                          | 25,000 credits/mo   | Yes |
 
 CrazySERP is also supported in-app, but its pricing and free-tier details are not listed here because they were not documented in the previous README.
 

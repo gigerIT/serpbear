@@ -1,5 +1,6 @@
 import { performance } from "perf_hooks";
 import { setTimeout as sleep } from "timers/promises";
+import Cryptr from "cryptr";
 import {
   RefreshResult,
   removeFromRetryQueue,
@@ -9,6 +10,10 @@ import {
 import parseKeywords from "./parseKeywords";
 import Keyword from "../database/models/keyword";
 import { logger } from "./logger";
+import {
+  decryptDomainScraperSettings,
+  parseDomainScraperSettings,
+} from "./domainScraperSettings";
 
 const buildLastUpdateError = (error: string, scraperType: string): string =>
   JSON.stringify({
@@ -65,6 +70,42 @@ const clearKeywordUpdatingState = async (
   ])[0];
 };
 
+const resolveEffectiveSettings = (
+  settings: SettingsType,
+  domainSettings?: DomainType
+): SettingsType => {
+  if (!domainSettings?.scraper_settings || !process.env.SECRET) {
+    return settings;
+  }
+
+  try {
+    const cryptr = new Cryptr(process.env.SECRET);
+    const parsed = parseDomainScraperSettings(domainSettings.scraper_settings);
+    const decrypted = decryptDomainScraperSettings(parsed, cryptr);
+
+    if (!decrypted?.scraper_type) {
+      return settings;
+    }
+
+    return {
+      ...settings,
+      scraper_type: decrypted.scraper_type,
+      ...(typeof decrypted.scraping_api === "string"
+        ? {
+            scraping_api: decrypted.scraping_api,
+            scaping_api: decrypted.scraping_api,
+          }
+        : {}),
+    };
+  } catch (error) {
+    logger.warn("Resolving domain scraper override failed", {
+      domain: domainSettings.domain,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return settings;
+  }
+};
+
 /**
  * Refreshes the Keywords position by Scraping Google Search Result by
  * Determining whether the keywords should be scraped in Parallel or not
@@ -90,6 +131,14 @@ const refreshAndUpdateKeywords = async (
   if (["scrapingant", "serpapi", "searchapi"].includes(settings.scraper_type)) {
     const refreshedResults = await refreshParallel(keywords, settings, domains);
     for (const keyword of rawKeyword) {
+      const keywordPlain = keyword.get({ plain: true }) as KeywordType;
+      const domainSettings = domains?.find(
+        (d) => d.domain === keywordPlain.domain
+      );
+      const effectiveSettings = resolveEffectiveSettings(
+        settings,
+        domainSettings
+      );
       const refreshedKeywordData = refreshedResults.find(
         (k) => k && k.ID === keyword.ID
       );
@@ -97,13 +146,13 @@ const refreshAndUpdateKeywords = async (
         const updatedKeyword = await updateKeywordPosition(
           keyword,
           refreshedKeywordData,
-          settings
+          effectiveSettings
         );
         updatedKeywords.push(updatedKeyword);
       } else {
         const clearedKeyword = await clearKeywordUpdatingState(
           keyword,
-          settings,
+          effectiveSettings,
           "Parallel scrape returned no data"
         );
         updatedKeywords.push(clearedKeyword);
@@ -116,9 +165,13 @@ const refreshAndUpdateKeywords = async (
       const domainSettings = domains?.find(
         (d) => d.domain === keywordPlain.domain
       );
+      const effectiveSettings = resolveEffectiveSettings(
+        settings,
+        domainSettings
+      );
       const updatedKeyword = await refreshAndUpdateKeyword(
         keyword,
-        settings,
+        effectiveSettings,
         domainSettings
       );
       updatedKeywords.push(updatedKeyword);
@@ -281,7 +334,11 @@ const refreshParallel = async (
 ): Promise<RefreshResult[]> => {
   const promises: Promise<RefreshResult>[] = keywords.map((keyword) => {
     const domainSettings = domains?.find((d) => d.domain === keyword.domain);
-    return scrapeKeywordWithStrategy(keyword, settings, domainSettings);
+    return scrapeKeywordWithStrategy(
+      keyword,
+      resolveEffectiveSettings(settings, domainSettings),
+      domainSettings
+    );
   });
 
   const settledResults = await Promise.allSettled(promises);

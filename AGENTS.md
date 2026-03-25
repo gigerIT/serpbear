@@ -59,6 +59,7 @@
 - Migrations: keep the timestamped Umzug file pattern, implement both `up` and `down`, wrap schema changes in a transaction, and guard table or column access before altering older databases.
 - API routes: keep route contracts stable because both the UI hooks and cron worker call them directly. If a route should work with API-key auth, add it to `allowedApiRoutes` in `utils/verifyUser.ts`.
 - Scraper integrations: add the adapter under `scrapers/services/`, then register it in `scrapers/index.ts` with accurate metadata like `id`, `name`, `allowsCity`, and `nativePagination`.
+- Domain-level scraper overrides are stored in `domain.scraper_settings` as encrypted JSON; mask API keys in responses and decrypt them only when building effective runtime settings.
 
 ## Useful Gotchas
 

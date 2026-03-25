@@ -1,5 +1,12 @@
 type ScrapeStrategy = "basic" | "custom" | "smart";
 
+type DomainScraperSettings = {
+  scraper_type?: string | null;
+  scraping_api?: string | null;
+  has_api_key?: boolean;
+  clear_api_key?: boolean;
+};
+
 type DomainType = {
   ID: number;
   domain: string;
@@ -18,6 +25,7 @@ type DomainType = {
   scPosition?: number;
   search_console?: string;
   ideas_settings?: string;
+  scraper_settings?: DomainScraperSettings | null;
   scrape_strategy?: ScrapeStrategy | "";
   scrape_pagination_limit?: number;
   scrape_smart_full_fallback?: boolean;
@@ -86,6 +94,7 @@ type DomainSettings = {
   notification_interval: string;
   notification_emails: string;
   search_console?: DomainSearchConsole;
+  scraper_settings?: DomainScraperSettings | null;
   scrape_strategy?: ScrapeStrategy | "";
   scrape_pagination_limit?: number;
   scrape_smart_full_fallback?: boolean;
