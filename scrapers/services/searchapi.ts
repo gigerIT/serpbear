@@ -1,4 +1,5 @@
 import countries from "../../utils/countries";
+import { parseScraperResults } from "./parserHelpers";
 
 interface SearchApiResult {
   title: string;
@@ -40,10 +41,11 @@ const searchapi: ScraperSettings = {
   resultObjectKey: "organic_results",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const results: SearchApiResult[] =
-      typeof content === "string"
-        ? JSON.parse(content)
-        : (content as SearchApiResult[]);
+    const results = parseScraperResults<SearchApiResult>(
+      content,
+      "SearchApi.io",
+      ["organic_results"]
+    );
 
     for (const { link, title, position } of results) {
       if (title && link) {

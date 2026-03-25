@@ -1,4 +1,5 @@
 import countries from "../../utils/countries";
+import { parseScraperResults } from "./parserHelpers";
 
 interface SpaceSerpResult {
   title: string;
@@ -31,10 +32,11 @@ const spaceSerp: ScraperSettings = {
   resultObjectKey: "organic_results",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const results: SpaceSerpResult[] =
-      typeof content === "string"
-        ? JSON.parse(content)
-        : (content as SpaceSerpResult[]);
+    const results = parseScraperResults<SpaceSerpResult>(
+      content,
+      "Space Serp",
+      ["organic_results"]
+    );
     for (const result of results) {
       if (result.title && result.link) {
         extractedResult.push({

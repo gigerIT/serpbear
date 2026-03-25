@@ -1,4 +1,5 @@
 import countries from "../../utils/countries";
+import { parseScraperResults } from "./parserHelpers";
 
 const googleDomains: Record<string, string> = {
   GB: "www.google.co.uk",
@@ -57,8 +58,10 @@ const crazyserp: ScraperSettings = {
   resultObjectKey: "parsed_data",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const parsed = typeof content === "string" ? JSON.parse(content) : content;
-    const results: CrazySerpResult[] = parsed.organic || parsed;
+    const results = parseScraperResults<CrazySerpResult>(content, "CrazySERP", [
+      "organic",
+      "parsed_data",
+    ]);
 
     for (const { url, title, position } of results) {
       if (title && url) {

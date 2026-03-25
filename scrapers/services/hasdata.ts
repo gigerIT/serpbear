@@ -1,4 +1,5 @@
 import countries from "../../utils/countries";
+import { parseScraperResults } from "./parserHelpers";
 
 interface HasDataResult {
   title: string;
@@ -36,10 +37,9 @@ const hasdata: ScraperSettings = {
   resultObjectKey: "organicResults",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const results: HasDataResult[] =
-      typeof content === "string"
-        ? JSON.parse(content)
-        : (content as HasDataResult[]);
+    const results = parseScraperResults<HasDataResult>(content, "HasData", [
+      "organicResults",
+    ]);
 
     for (const { link, title, position } of results) {
       if (title && link) {

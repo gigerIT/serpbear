@@ -1,4 +1,5 @@
 import countries from "../../utils/countries";
+import { parseScraperResults } from "./parserHelpers";
 
 interface ValueSerpResult {
   title: string;
@@ -37,10 +38,11 @@ const valueSerp: ScraperSettings = {
   resultObjectKey: "organic_results",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const results: ValueSerpResult[] =
-      typeof content === "string"
-        ? JSON.parse(content)
-        : (content as ValueSerpResult[]);
+    const results = parseScraperResults<ValueSerpResult>(
+      content,
+      "Value Serp",
+      ["organic_results"]
+    );
     for (const result of results) {
       if (result.title && result.link) {
         extractedResult.push({

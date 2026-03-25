@@ -1,3 +1,5 @@
+import { parseScraperResults } from "./parserHelpers";
+
 interface SerplyResult {
   title: string;
   link: string;
@@ -51,10 +53,9 @@ const serply: ScraperSettings = {
   resultObjectKey: "result",
   serpExtractor: (content) => {
     const extractedResult = [];
-    const results: SerplyResult[] =
-      typeof content === "string"
-        ? JSON.parse(content)
-        : (content as SerplyResult[]);
+    const results = parseScraperResults<SerplyResult>(content, "Serply", [
+      "result",
+    ]);
     for (const result of results) {
       if (result.title && result.link) {
         extractedResult.push({
