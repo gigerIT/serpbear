@@ -160,11 +160,25 @@ export const updateKeywordPosition = async (
           : updatedKeyword.result,
         history: JSON.stringify(history),
       });
-      console.log(
-        `[SUCCESS] Updating the Keyword: ${
-          keyword.keyword
-        } | foundPosition=${newPos} | url="${updatedKeyword.url || ""}"`
-      );
+
+      if (updatedKeyword.error) {
+        console.log(
+          `[ERROR] Updating the Keyword failed: ${
+            keyword.keyword
+          } | foundPosition=${newPos} | url="${
+            updatedKeyword.url || ""
+          }" | error="${updatedKeyword.error}" | scraper="${
+            settings.scraper_type
+          }"`
+        );
+      } else {
+        console.log(
+          `[SUCCESS] Updating the Keyword: ${
+            keyword.keyword
+          } | foundPosition=${newPos} | url="${updatedKeyword.url || ""}"`
+        );
+      }
+
       updated = {
         ...keyword,
         ...updatedVal,

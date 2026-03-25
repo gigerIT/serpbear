@@ -16,6 +16,11 @@ type SERPObject = {
   url: string;
 };
 
+type ScrapePageResult = {
+  results: SearchResult[];
+  error?: string;
+};
+
 export type RefreshResult =
   | false
   | {
@@ -223,7 +228,7 @@ const scrapeSinglePage = async (
   settings: SettingsType,
   scraperObj: ScraperSettings | undefined,
   pagination: ScraperPagination
-): Promise<SearchResult[]> => {
+): Promise<ScrapePageResult> => {
   const scraperType = settings?.scraper_type || "";
   const scraperClient = getScraperClient(
     keyword,
@@ -232,7 +237,12 @@ const scrapeSinglePage = async (
     pagination
   );
   if (!scraperClient) {
-    return [];
+    return {
+      results: [],
+      error: `Unable to create scraper client for scraperType="${
+        scraperType || "unknown"
+      }"`,
+    };
   }
   try {
     const res =
@@ -249,12 +259,38 @@ const scrapeSinglePage = async (
       const extracted = scraperObj?.serpExtractor
         ? scraperObj.serpExtractor(scrapeResult)
         : extractScrapedResult(scrapeResult, keyword.device);
-      return extracted.map((item, i) => ({
-        ...item,
-        position: pagination.start + i + 1,
-      }));
+      return {
+        results: extracted.map((item, i) => ({
+          ...item,
+          position: pagination.start + i + 1,
+        })),
+      };
     }
+
+    const emptyResponseError = `Scraper response did not include usable result content: ${stringifyErrorDetails(
+      {
+        hasData: Boolean((res as any)?.data),
+        hasHtml: Boolean((res as any)?.html),
+        hasResults: Boolean((res as any)?.results),
+        detail: (res as any)?.detail,
+        error: (res as any)?.error,
+        resultObjectKey: scraperObj?.resultObjectKey || null,
+      }
+    )}`;
+    logScrapeError(
+      "Scraping page failed",
+      {
+        keyword,
+        scraperType,
+        scraperObj,
+        page: pagination.page,
+        pagination,
+      },
+      new Error(emptyResponseError)
+    );
+    return { results: [], error: emptyResponseError };
   } catch (error: any) {
+    const message = getErrorMessage(error);
     logScrapeError(
       "Scraping page failed",
       {
@@ -266,8 +302,8 @@ const scrapeSinglePage = async (
       },
       error
     );
+    return { results: [], error: message };
   }
-  return [];
 };
 
 /**
@@ -348,7 +384,7 @@ export const scrapeKeywordWithStrategy = async (
     position: keyword.position,
     url: keyword.url,
     result: keyword.lastResult,
-    error: true,
+    error: "Unknown scrape error",
   };
 
   // Native-pagination scrapers (serpapi, searchapi) fetch 100 results in one request
@@ -377,6 +413,7 @@ export const scrapeKeywordWithStrategy = async (
   }
 
   const allScrapedResults: SearchResult[] = [];
+  const pageErrors: string[] = [];
   for (const pageNum of pagesToScrape) {
     const pagination: ScraperPagination = {
       start: (pageNum - 1) * PAGE_SIZE,
@@ -384,19 +421,26 @@ export const scrapeKeywordWithStrategy = async (
       page: pageNum,
     };
     // eslint-disable-next-line no-await-in-loop
-    const pageResults = await scrapeSinglePage(
+    const pageScrape = await scrapeSinglePage(
       keyword,
       settings,
       scraperObj,
       pagination
     );
-    if (pageResults.length > 0) {
-      allScrapedResults.push(...pageResults);
+    if (pageScrape.results.length > 0) {
+      allScrapedResults.push(...pageScrape.results);
+    } else if (pageScrape.error) {
+      pageErrors.push(`page ${pageNum}: ${pageScrape.error}`);
     }
   }
 
   if (allScrapedResults.length === 0) {
-    return errorResult;
+    return {
+      ...errorResult,
+      error:
+        pageErrors.join(" || ") ||
+        `No results scraped for keyword "${keyword.keyword}"`,
+    };
   }
   // Smart + full fallback: if domain not found on neighboring pages, scrape the rest
   if (strategy === "smart" && smartFullFallback) {
@@ -414,14 +458,16 @@ export const scrapeKeywordWithStrategy = async (
           page: pageNum,
         };
         // eslint-disable-next-line no-await-in-loop
-        const pageResults = await scrapeSinglePage(
+        const pageScrape = await scrapeSinglePage(
           keyword,
           settings,
           scraperObj,
           pagination
         );
-        if (pageResults.length > 0) {
-          allScrapedResults.push(...pageResults);
+        if (pageScrape.results.length > 0) {
+          allScrapedResults.push(...pageScrape.results);
+        } else if (pageScrape.error) {
+          pageErrors.push(`page ${pageNum}: ${pageScrape.error}`);
         }
       }
     }
