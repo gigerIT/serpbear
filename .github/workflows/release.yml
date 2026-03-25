@@ -15,7 +15,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: "25"
   RELEASE_PLEASE_VERSION: "17.3.0"
 
 jobs:
@@ -32,7 +31,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
 
       - name: Capture existing GitHub releases
         env:

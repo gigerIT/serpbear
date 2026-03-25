@@ -25,7 +25,7 @@
 
 ## Local Workflow
 
-- Use Node 25 and `npm ci`.
+- Use Node 22.11.0 and `npm ci`; `.nvmrc`, GitHub Actions, and the Docker image are kept aligned because Next.js 12's bundled `jsonwebtoken` breaks on Node 25.8.x.
 - `npm run dev`: start the Next app.
 - `npm run cron`: run the worker by itself.
 - `npm run lint`, `npm run test:ci`, `npm run build`: match CI.
