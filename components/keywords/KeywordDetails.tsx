@@ -52,7 +52,9 @@ const KeywordDetails = ({
   useOnKey('Escape', closeDetails);
 
   useEffect(() => {
-    refetchKeywordData();
+    if (typeof refetchKeywordData === 'function') {
+      refetchKeywordData();
+    }
   }, [keyword.ID, keyword.lastUpdated, refetchKeywordData]);
 
   useLayoutEffect(() => {
