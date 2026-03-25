@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 type ScrapeStrategy = "basic" | "custom" | "smart";
 
 type DomainType = {
@@ -95,6 +94,7 @@ type DomainSettings = {
 type SettingsType = {
   scraper_type: string;
   scaping_api?: string;
+  scraping_api?: string;
   proxy?: string;
   notification_interval: string;
   notification_email: string;
@@ -285,6 +285,10 @@ interface ScraperSettings {
     countries: countryData,
     pagination?: ScraperPagination
   ): RequestInit;
+  /** Optional per-scraper request timeout override in milliseconds. */
+  timeoutMs?: number;
   /** Custom function to extract the serp result from the scraped data. The extracted data should be @return {scraperExtractedItem[]} */
   serpExtractor?(content: string): scraperExtractedItem[];
 }
+
+declare module "proper-lockfile";

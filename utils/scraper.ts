@@ -1,8 +1,8 @@
 import axios, { AxiosResponse, CreateAxiosDefaults } from "axios";
 import * as cheerio from "cheerio";
-import { readFile, writeFile } from "fs/promises";
 import HttpsProxyAgent from "https-proxy-agent";
 import countries from "./countries";
+import { retryQueueManager } from "./retryQueueManager";
 import allScrapers from "../scrapers/index";
 
 type SearchResult = {
@@ -34,6 +34,15 @@ export type RefreshResult =
 
 const TOTAL_PAGES = 10;
 const PAGE_SIZE = 10;
+const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+const MAX_REQUEST_TIMEOUT_MS = 30000;
+const DEFAULT_RETRY_ATTEMPTS = 3;
+
+const getRetryDelay = (attempt: number, baseDelay: number = 1000): number => {
+  const exponentialDelay = baseDelay * 2 ** attempt;
+  const jitter = Math.random() * exponentialDelay * 0.1;
+  return Math.min(exponentialDelay + jitter, MAX_REQUEST_TIMEOUT_MS);
+};
 
 const stringifyErrorDetails = (details: unknown): string => {
   if (!details) {
@@ -78,6 +87,146 @@ const getErrorMessage = (error: any): string => {
   }
 
   return stringifyErrorDetails(error) || "Unknown error";
+};
+
+const hasScraperError = (responseBody: any): boolean => {
+  if (!responseBody || typeof responseBody !== "object") {
+    return false;
+  }
+
+  const status = responseBody.status;
+
+  return Boolean(
+    (typeof status === "number" && (status < 200 || status >= 300)) ||
+      responseBody.ok === false ||
+      responseBody.request_info?.success === false
+  );
+};
+
+const buildScraperError = (responseBody: any): string => {
+  if (!responseBody || typeof responseBody !== "object") {
+    return "Unknown scraper error";
+  }
+
+  const statusCode =
+    responseBody.status ?? responseBody.request_info?.status_code ?? null;
+  const details = [
+    responseBody.request_info?.error,
+    responseBody.error_message,
+    responseBody.detail,
+    responseBody.error,
+    responseBody.request_info?.message,
+    responseBody.body,
+    responseBody.message,
+  ]
+    .map((value) => stringifyErrorDetails(value))
+    .filter(Boolean);
+
+  const suffix = details.length > 0 ? details.join(" | ") : "Request failed";
+  return statusCode ? `[${statusCode}] ${suffix}` : suffix;
+};
+
+const resolveFetchTimeoutMs = (
+  scraper: ScraperSettings | undefined,
+  retryAttempt: number
+): number => {
+  if (typeof scraper?.timeoutMs === "number" && scraper.timeoutMs > 0) {
+    return scraper.timeoutMs;
+  }
+
+  return Math.min(
+    MAX_REQUEST_TIMEOUT_MS,
+    DEFAULT_REQUEST_TIMEOUT_MS + retryAttempt * 5000
+  );
+};
+
+type ScraperResponsePayload = {
+  body: any;
+  responseStatus?: number;
+  responseStatusText?: string;
+  responseOk?: boolean;
+};
+
+const parseScraperResponse = async (
+  response: AxiosResponse | Response,
+  useProxy: boolean
+): Promise<ScraperResponsePayload> => {
+  if (useProxy) {
+    const axiosResponse = response as AxiosResponse;
+    return {
+      body: axiosResponse.data,
+      responseStatus: axiosResponse.status,
+      responseStatusText: axiosResponse.statusText,
+      responseOk:
+        typeof axiosResponse.status === "number"
+          ? axiosResponse.status >= 200 && axiosResponse.status < 300
+          : undefined,
+    };
+  }
+
+  const fetchResponse = response as Response;
+  let body;
+
+  try {
+    body = await fetchResponse.json();
+  } catch (error) {
+    throw new Error(
+      `Failed to parse scraper JSON response: ${getErrorMessage(error)}`
+    );
+  }
+
+  return {
+    body,
+    responseStatus: fetchResponse.status,
+    responseStatusText: fetchResponse.statusText,
+    responseOk: fetchResponse.ok,
+  };
+};
+
+const normalizeScraperBody = ({
+  body,
+  responseStatus,
+  responseStatusText,
+  responseOk,
+}: ScraperResponsePayload): any => {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return body;
+  }
+
+  return {
+    ...body,
+    status: body.status ?? responseStatus,
+    ok: body.ok ?? responseOk,
+    statusText: body.statusText ?? responseStatusText,
+  };
+};
+
+const getScrapeResultPayload = (
+  responseBody: any,
+  scraperObj?: ScraperSettings
+): string => {
+  if (!responseBody) {
+    return "";
+  }
+
+  const scraperResult =
+    scraperObj?.resultObjectKey && responseBody[scraperObj.resultObjectKey]
+      ? responseBody[scraperObj.resultObjectKey]
+      : "";
+
+  return (
+    responseBody.data ||
+    responseBody.html ||
+    responseBody.results ||
+    responseBody.body ||
+    scraperResult ||
+    ""
+  );
+};
+
+const sleepForRetry = async (attempt: number): Promise<void> => {
+  const delay = getRetryDelay(attempt);
+  await new Promise((resolve) => setTimeout(resolve, delay));
 };
 
 const logScrapeError = (
@@ -152,7 +301,6 @@ export const getScraperClient = (
     Accept: "application/json; charset=utf8;",
   };
 
-  // eslint-disable-next-line max-len
   const mobileAgent =
     "Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36";
   if (keyword && keyword.device === "mobile") {
@@ -420,7 +568,6 @@ export const scrapeKeywordWithStrategy = async (
       num: PAGE_SIZE,
       page: pageNum,
     };
-    // eslint-disable-next-line no-await-in-loop
     const pageScrape = await scrapeSinglePage(
       keyword,
       settings,
@@ -457,7 +604,6 @@ export const scrapeKeywordWithStrategy = async (
           num: PAGE_SIZE,
           page: pageNum,
         };
-        // eslint-disable-next-line no-await-in-loop
         const pageScrape = await scrapeSinglePage(
           keyword,
           settings,

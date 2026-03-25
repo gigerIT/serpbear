@@ -1,33 +1,28 @@
 {
-   "compilerOptions": {
-      "target": "esnext",
-      "lib": [
-         "dom",
-         "dom.iterable",
-         "esnext"
-      ],
-      "allowJs": true,
-      "skipLibCheck": true,
-      "strict": true,
-      "forceConsistentCasingInFileNames": true,
-      "noEmit": true,
-      "esModuleInterop": true,
-      "module": "esnext",
-      "moduleResolution": "node",
-      "resolveJsonModule": true,
-      "isolatedModules": true,
-      "jsx": "preserve",
-      "incremental": true,
-      "experimentalDecorators": true
-   },
-   "include": [
-      "next-env.d.ts",
-      "**/*.ts",
-      "**/*.tsx",
-      "types.d.ts",
-      "./jest.setup.js"
-   ],
-   "exclude": [
-      "node_modules"
-   ]
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "experimentalDecorators": true
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "types.d.ts",
+    "./jest.setup.js"
+  ],
+  "exclude": ["ideas", "node_modules"]
 }

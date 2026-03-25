@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 import "isomorphic-fetch";
 import "./styles/globals.css";
 import "@testing-library/jest-dom";
