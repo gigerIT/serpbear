@@ -37,6 +37,23 @@ const PAGE_SIZE = 10;
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 const MAX_REQUEST_TIMEOUT_MS = 30000;
 const DEFAULT_RETRY_ATTEMPTS = 3;
+const GOOGLE_BASE_URL = "https://www.google.com";
+const GOOGLE_REDIRECT_PATHS = [
+  "/url",
+  "/interstitial",
+  "/imgres",
+  "/aclk",
+  "/link",
+];
+const GOOGLE_REDIRECT_PARAMS = [
+  "url",
+  "q",
+  "imgurl",
+  "target",
+  "dest",
+  "u",
+  "adurl",
+];
 
 const getRetryDelay = (attempt: number, baseDelay: number = 1000): number => {
   const exponentialDelay = baseDelay * 2 ** attempt;
@@ -227,6 +244,98 @@ const getScrapeResultPayload = (
 const sleepForRetry = async (attempt: number): Promise<void> => {
   const delay = getRetryDelay(attempt);
   await new Promise((resolve) => setTimeout(resolve, delay));
+};
+
+const ensureAbsoluteURL = (
+  value: string | undefined | null,
+  base: string = GOOGLE_BASE_URL
+): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  try {
+    if (trimmedValue.startsWith("//")) {
+      return new URL(`https:${trimmedValue}`).toString();
+    }
+
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmedValue)) {
+      return new URL(trimmedValue).toString();
+    }
+
+    if (trimmedValue.startsWith("/")) {
+      return new URL(trimmedValue, base).toString();
+    }
+
+    return new URL(`https://${trimmedValue}`).toString();
+  } catch {
+    return null;
+  }
+};
+
+export const normalizeGoogleHref = (
+  href: string | undefined | null
+): string | null => {
+  if (!href) {
+    return null;
+  }
+
+  let resolvedURL: URL;
+  try {
+    resolvedURL = new URL(href, GOOGLE_BASE_URL);
+  } catch {
+    return ensureAbsoluteURL(href);
+  }
+
+  const isRedirectPath = GOOGLE_REDIRECT_PATHS.some((redirectPath) =>
+    resolvedURL.pathname.startsWith(redirectPath)
+  );
+
+  if (isRedirectPath) {
+    for (const redirectParam of GOOGLE_REDIRECT_PARAMS) {
+      const candidate = resolvedURL.searchParams.get(redirectParam);
+      const absoluteCandidate = ensureAbsoluteURL(
+        candidate,
+        resolvedURL.origin
+      );
+      if (absoluteCandidate) {
+        return absoluteCandidate;
+      }
+    }
+  }
+
+  return resolvedURL.toString();
+};
+
+const isGoogleResultURL = (value: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const parsedURL = new URL(value);
+    return parsedURL.origin === GOOGLE_BASE_URL;
+  } catch {
+    return false;
+  }
+};
+
+const resolveResultURL = (value: string | undefined | null): URL | null => {
+  const absoluteURL = ensureAbsoluteURL(value);
+  if (!absoluteURL) {
+    return null;
+  }
+
+  try {
+    return new URL(absoluteURL);
+  } catch {
+    return null;
+  }
 };
 
 const logScrapeError = (
@@ -811,8 +920,10 @@ export const extractScrapedResult = (
   for (let i = 0; i < searchResultItems.length; i += 1) {
     if (searchResultItems[i]) {
       const title = $(searchResultItems[i]).html();
-      const url = $(searchResultItems[i]).closest("a").attr("href");
-      if (title && url) {
+      const url = normalizeGoogleHref(
+        $(searchResultItems[i]).closest("a").attr("href")
+      );
+      if (title && url && !isGoogleResultURL(url)) {
         lastPosition += 1;
         extractedResult.push({ title, url, position: lastPosition });
       }
@@ -825,8 +936,8 @@ export const extractScrapedResult = (
     for (let i = 0; i < rsoHeadings.length; i += 1) {
       const heading = $(rsoHeadings[i]);
       const title = heading.text();
-      const url = heading.closest("a").attr("href");
-      if (title && url && url.startsWith("http")) {
+      const url = normalizeGoogleHref(heading.closest("a").attr("href"));
+      if (title && url && !isGoogleResultURL(url)) {
         lastPosition += 1;
         extractedResult.push({ title, url, position: lastPosition });
       }
@@ -845,10 +956,10 @@ export const extractScrapedResult = (
       const item = $(items[i]);
       const linkDom = item.find('a[role="presentation"]');
       if (linkDom) {
-        const url = linkDom.attr("href");
+        const url = normalizeGoogleHref(linkDom.attr("href"));
         const titleDom = linkDom.find('[role="link"]');
         const title = titleDom ? titleDom.text() : "";
-        if (title && url) {
+        if (title && url && !isGoogleResultURL(url)) {
           lastPosition += 1;
           extractedResult.push({ title, url, position: lastPosition });
         }
@@ -882,9 +993,10 @@ export const getSerp = (
     if (!item.url) {
       return false;
     }
-    const itemURL = new URL(
-      item.url.includes("https://") ? item.url : `https://${item.url}`
-    );
+    const itemURL = resolveResultURL(item.url);
+    if (!itemURL) {
+      return false;
+    }
     if (
       isURL &&
       `${stripWww(URLToFind.hostname)}${URLToFind.pathname}/` ===

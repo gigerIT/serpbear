@@ -9,6 +9,59 @@ import {
 import parseKeywords from "./parseKeywords";
 import Keyword from "../database/models/keyword";
 
+const buildLastUpdateError = (error: string, scraperType: string): string =>
+  JSON.stringify({
+    date: new Date().toJSON(),
+    error,
+    scraper: scraperType,
+  });
+
+const clearKeywordUpdatingState = async (
+  keyword: Keyword,
+  settings: SettingsType,
+  error?: string
+): Promise<KeywordType> => {
+  const currentKeyword = keyword.get({ plain: true }) as KeywordType;
+  const lastUpdateError = error
+    ? buildLastUpdateError(error, settings.scraper_type)
+    : "false";
+
+  try {
+    await keyword.update({
+      updating: false,
+      lastUpdateError,
+    });
+  } catch (updateError) {
+    console.log(
+      "[ERROR] Clearing keyword updating state failed",
+      currentKeyword.keyword,
+      updateError
+    );
+  }
+
+  try {
+    if (error && settings?.scrape_retry) {
+      await retryScrape(currentKeyword.ID);
+    } else {
+      await removeFromRetryQueue(currentKeyword.ID);
+    }
+  } catch (queueError) {
+    console.log(
+      "[ERROR] Updating retry queue failed",
+      currentKeyword.keyword,
+      queueError
+    );
+  }
+
+  return parseKeywords([
+    {
+      ...currentKeyword,
+      updating: false,
+      lastUpdateError,
+    } as unknown as Keyword,
+  ])[0];
+};
+
 /**
  * Refreshes the Keywords position by Scraping Google Search Result by
  * Determining whether the keywords should be scraped in Parallel or not
@@ -33,19 +86,24 @@ const refreshAndUpdateKeywords = async (
 
   if (["scrapingant", "serpapi", "searchapi"].includes(settings.scraper_type)) {
     const refreshedResults = await refreshParallel(keywords, settings, domains);
-    if (refreshedResults.length > 0) {
-      for (const keyword of rawKeyword) {
-        const refreshedKeywordData = refreshedResults.find(
-          (k) => k && k.ID === keyword.ID
+    for (const keyword of rawKeyword) {
+      const refreshedKeywordData = refreshedResults.find(
+        (k) => k && k.ID === keyword.ID
+      );
+      if (refreshedKeywordData) {
+        const updatedKeyword = await updateKeywordPosition(
+          keyword,
+          refreshedKeywordData,
+          settings
         );
-        if (refreshedKeywordData) {
-          const updatedKeyword = await updateKeywordPosition(
-            keyword,
-            refreshedKeywordData,
-            settings
-          );
-          updatedKeywords.push(updatedKeyword);
-        }
+        updatedKeywords.push(updatedKeyword);
+      } else {
+        const clearedKeyword = await clearKeywordUpdatingState(
+          keyword,
+          settings,
+          "Parallel scrape returned no data"
+        );
+        updatedKeywords.push(clearedKeyword);
       }
     }
   } else {
@@ -89,15 +147,24 @@ const refreshAndUpdateKeyword = async (
   domainSettings?: DomainType
 ): Promise<KeywordType> => {
   const currentKeyword = keyword.get({ plain: true });
-  const refreshedKeywordData = await scrapeKeywordWithStrategy(
-    currentKeyword,
-    settings,
-    domainSettings
-  );
-  const updatedKeyword = refreshedKeywordData
-    ? await updateKeywordPosition(keyword, refreshedKeywordData, settings)
-    : currentKeyword;
-  return updatedKeyword;
+  try {
+    const refreshedKeywordData = await scrapeKeywordWithStrategy(
+      currentKeyword,
+      settings,
+      domainSettings
+    );
+    if (!refreshedKeywordData) {
+      return clearKeywordUpdatingState(
+        keyword,
+        settings,
+        "Scraper returned no data"
+      );
+    }
+
+    return updateKeywordPosition(keyword, refreshedKeywordData, settings);
+  } catch (error) {
+    return clearKeywordUpdatingState(keyword, settings, `${error}`);
+  }
 };
 
 /**
@@ -209,15 +276,21 @@ const refreshParallel = async (
     return scrapeKeywordWithStrategy(keyword, settings, domainSettings);
   });
 
-  return Promise.all(promises)
-    .then((promiseData) => {
-      console.log("ALL DONE!!!");
-      return promiseData;
-    })
-    .catch((err) => {
-      console.log(err);
-      return [];
-    });
+  const settledResults = await Promise.allSettled(promises);
+  const results: RefreshResult[] = [];
+
+  for (const settledResult of settledResults) {
+    if (settledResult.status === "fulfilled") {
+      results.push(settledResult.value);
+      continue;
+    }
+
+    console.log(settledResult.reason);
+    results.push(false);
+  }
+
+  console.log("ALL DONE!!!");
+  return results;
 };
 
 export default refreshAndUpdateKeywords;

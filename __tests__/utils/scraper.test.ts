@@ -13,7 +13,34 @@ jest.mock("../../scrapers/index", () => [
   },
 ]);
 
-import { scrapeKeywordFromGoogle } from "../../utils/scraper";
+import {
+  normalizeGoogleHref,
+  scrapeKeywordFromGoogle,
+} from "../../utils/scraper";
+
+describe("normalizeGoogleHref", () => {
+  it("unwraps Google redirect urls", () => {
+    expect(
+      normalizeGoogleHref(
+        "/url?q=https%3A%2F%2Fexample.com%2Flanding&sa=U&ved=0"
+      )
+    ).toBe("https://example.com/landing");
+    expect(
+      normalizeGoogleHref(
+        "/interstitial?url=https://example.com/from-interstitial"
+      )
+    ).toBe("https://example.com/from-interstitial");
+  });
+
+  it("normalizes protocol-relative and relative paths", () => {
+    expect(normalizeGoogleHref("//example.com/path")).toBe(
+      "https://example.com/path"
+    );
+    expect(normalizeGoogleHref("/maps/place/test")).toBe(
+      "https://www.google.com/maps/place/test"
+    );
+  });
+});
 
 describe("scraper hardening", () => {
   const originalFetch = global.fetch;
