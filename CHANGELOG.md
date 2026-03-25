@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.0.5](https://github.com/gigerIT/serpbear/compare/v3.0.4...v3.0.5) (2026-03-25)
+
+
+### Bug Fixes
+
+* align CI Node version with Next 12 compatibility ([d3a8a4d](https://github.com/gigerIT/serpbear/commit/d3a8a4d6c67a89933c8deeac550a596299c295b8))
+* reset Google Ads OAuth state on reconnect ([7fdec37](https://github.com/gigerIT/serpbear/commit/7fdec3735e3907f1b699f87fdc262e9d1bd32110))
+
 ## [3.0.4](https://github.com/gigerIT/serpbear/compare/v3.0.3...v3.0.4) (2026-03-24)
 
 
