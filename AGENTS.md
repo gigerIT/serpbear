@@ -8,7 +8,7 @@
 
 - Next.js 16 Pages Router app with React 18, TypeScript, Tailwind, and project-specific global CSS.
 - Backend logic lives in Next API routes under `pages/api/`.
-- SQLite is accessed through `sequelize-typescript` models in `database/models/`.
+- SQLite is accessed through `sequelize-typescript` models in `database/models/`, backed by a custom `better-sqlite3` dialect shim in `database/sqlite-dialect.js`.
 - A separate cron worker in `cron.js` calls the app's HTTP API using `APIKEY`.
 
 ## Repo Map
@@ -53,6 +53,7 @@
 - Settings: keep defaults synchronized between `components/settings/Settings.tsx` and `pages/api/settings.ts`. Bootstrap behavior should still work if `data/settings.json` does not exist yet.
 - Google Ads auth: Step 1 starts from `POST /api/adwords/auth`, which persists the client ID/secret, clears any stale refresh token, stores a short-lived OAuth state cookie, and returns a consent-forcing OAuth URL before Google redirects back to `GET /api/adwords`; preserve that start-and-callback pairing when editing the flow.
 - Database: update the Sequelize model and add a migration in `database/migrations/`. Do not rely on `db.sync()` alone for shipped schema changes.
+- SQLite driver changes must keep `database/database.ts`, `database/config.js`, and `database/sqlite-dialect.js` aligned so the app runtime and Sequelize CLI migrations use the same dialect behavior.
 - Migrations: keep the timestamped Umzug file pattern, implement both `up` and `down`, wrap schema changes in a transaction, and guard table or column access before altering older databases.
 - API routes: keep route contracts stable because both the UI hooks and cron worker call them directly. If a route should work with API-key auth, add it to `allowedApiRoutes` in `utils/verifyUser.ts`.
 - Scraper integrations: add the adapter under `scrapers/services/`, then register it in `scrapers/index.ts` with accurate metadata like `id`, `name`, `allowsCity`, and `nativePagination`.
