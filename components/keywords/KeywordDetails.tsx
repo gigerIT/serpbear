@@ -4,15 +4,15 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
-import dayjs from "dayjs";
-import Icon from "../common/Icon";
-import countries from "../../utils/countries";
-import Chart from "../common/Chart";
-import SelectField from "../common/SelectField";
-import { useFetchSingleKeyword } from "../../services/keywords";
-import useOnKey from "../../hooks/useOnKey";
-import { generateTheChartData } from "../../utils/client/generateChartData";
+} from 'react';
+import dayjs from 'dayjs';
+import Icon from '../common/Icon';
+import countries from '../../utils/countries';
+import Chart from '../common/Chart';
+import SelectField from '../common/SelectField';
+import { useFetchSingleKeyword } from '../../services/keywords';
+import useOnKey from '../../hooks/useOnKey';
+import { generateTheChartData } from '../../utils/client/generateChartData';
 
 type KeywordDetailsProps = {
   keyword: KeywordType;
@@ -22,8 +22,8 @@ type KeywordDetailsProps = {
 };
 
 type ResultSegment =
-  | { type: "result"; item: KeywordLastResult }
-  | { type: "skipped"; from: number; to: number };
+  | { type: 'result'; item: KeywordLastResult }
+  | { type: 'skipped'; from: number; to: number };
 
 const KeywordDetails = ({
   keyword,
@@ -32,43 +32,41 @@ const KeywordDetails = ({
   refreshingKeyword = false,
 }: KeywordDetailsProps) => {
   const updatedDate = new Date(keyword.lastUpdated);
-  const [chartTime, setChartTime] = useState<string>("30");
+  const [chartTime, setChartTime] = useState<string>('30');
   const searchResultContainer = useRef<HTMLDivElement>(null);
   const searchResultFound = useRef<HTMLDivElement>(null);
-  const { data: keywordData, refetch: refetchKeywordData } =
-    useFetchSingleKeyword(keyword.ID);
-  const keywordHistory: KeywordHistory =
-    keywordData?.history || keyword.history;
+  const { data: keywordData, refetch: refetchKeywordData } = useFetchSingleKeyword(keyword.ID);
+  const keywordHistory: KeywordHistory = keywordData?.history || keyword.history;
   const keywordSearchResult: KeywordLastResult[] = useMemo(
     () => keywordData?.searchResult || keyword.lastResult || [],
-    [keywordData, keyword.lastResult]
+    [keywordData, keyword.lastResult],
   );
   const dateOptions = [
-    { label: "Last 7 Days", value: "7" },
-    { label: "Last 30 Days", value: "30" },
-    { label: "Last 90 Days", value: "90" },
-    { label: "1 Year", value: "360" },
-    { label: "All Time", value: "all" },
+    { label: 'Last 7 Days', value: '7' },
+    { label: 'Last 30 Days', value: '30' },
+    { label: 'Last 90 Days', value: '90' },
+    { label: '1 Year', value: '360' },
+    { label: 'All Time', value: 'all' },
   ];
 
-  useOnKey("Escape", closeDetails);
+  useOnKey('Escape', closeDetails);
 
   useEffect(() => {
-    if (typeof refetchKeywordData === "function") {
+    if (typeof refetchKeywordData === 'function') {
       refetchKeywordData();
     }
   }, [keyword.ID, keyword.lastUpdated, refetchKeywordData]);
 
   useLayoutEffect(() => {
     if (
-      keyword.position < 100 &&
-      keyword.position > 0 &&
-      searchResultFound?.current
+      keyword.position < 100
+      && keyword.position > 0
+      && searchResultFound?.current
     ) {
       searchResultFound.current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "start",
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'start',
       });
     }
   }, [keywordSearchResult, keyword.position]);
@@ -99,14 +97,14 @@ const KeywordDetails = ({
         skippedEnd = item.position;
       } else {
         if (skippedStart !== null) {
-          segs.push({ type: "skipped", from: skippedStart, to: skippedEnd });
+          segs.push({ type: 'skipped', from: skippedStart, to: skippedEnd });
           skippedStart = null;
         }
-        segs.push({ type: "result", item });
+        segs.push({ type: 'result', item });
       }
     }
     if (skippedStart !== null) {
-      segs.push({ type: "skipped", from: skippedStart, to: skippedEnd });
+      segs.push({ type: 'skipped', from: skippedStart, to: skippedEnd });
     }
 
     return {
@@ -117,8 +115,7 @@ const KeywordDetails = ({
   }, [keywordSearchResult]);
 
   // Label shown when keyword is not found
-  const notFoundLabel =
-    skippedCount > 0 ? `Not in First ${scrapedCount}` : "Not in First 100";
+  const notFoundLabel = skippedCount > 0 ? `Not in First ${scrapedCount}` : 'Not in First 100';
 
   const closeOnBGClick = (e: React.SyntheticEvent) => {
     e.stopPropagation();
@@ -141,11 +138,11 @@ const KeywordDetails = ({
               <span
                 title={countries[keyword.country][0]}
                 className={`fflag fflag-${keyword.country} w-[18px] h-[12px] mr-2`}
-              />{" "}
+              />{' '}
               {keyword.keyword}
               <span
                 className={`py-1 px-2 ml-2 rounded bg-blue-50 ${
-                  keyword.position === 0 ? "text-gray-500" : "text-blue-700"
+                  keyword.position === 0 ? 'text-gray-500' : 'text-blue-700'
                 } text-xs font-bold whitespace-nowrap inline-block align-middle`}
               >
                 {keyword.position === 0 ? notFoundLabel : keyword.position}
@@ -154,8 +151,8 @@ const KeywordDetails = ({
             <button
               className={`inline-flex shrink-0 items-center rounded px-3 py-2 text-sm font-semibold transition-colors ${
                 keyword.updating || refreshingKeyword
-                  ? "cursor-not-allowed bg-slate-100 text-slate-400"
-                  : "bg-indigo-50 text-blue-700 hover:bg-indigo-100"
+                  ? 'cursor-not-allowed bg-slate-100 text-slate-400'
+                  : 'bg-indigo-50 text-blue-700 hover:bg-indigo-100'
               }`}
               onClick={() => refreshKeyword(keyword.ID)}
               disabled={keyword.updating || refreshingKeyword}
@@ -164,8 +161,8 @@ const KeywordDetails = ({
               <Icon type="reload" size={12} classes="sm:mr-2" />
               <span className="hidden sm:inline">
                 {keyword.updating || refreshingKeyword
-                  ? "Refreshing Keyword..."
-                  : "Refresh Keyword"}
+                  ? 'Refreshing Keyword...'
+                  : 'Refresh Keyword'}
               </span>
             </button>
           </div>
@@ -189,7 +186,7 @@ const KeywordDetails = ({
                     setChartTime(updatedTime[0])
                   }
                   multiple={false}
-                  rounded={"rounded"}
+                  rounded={'rounded'}
                 />
               </div>
             </div>
@@ -204,7 +201,7 @@ const KeywordDetails = ({
                 <a
                   className="text-gray-400 hover:text-indigo-600 inline-block ml-1 px-2 py-1"
                   href={`https://www.google.com/search?q=${encodeURIComponent(
-                    keyword.keyword
+                    keyword.keyword,
                   )}&gl=${keyword.country.toLowerCase()}`}
                   target="_blank"
                   rel="noreferrer"
@@ -213,55 +210,53 @@ const KeywordDetails = ({
                 </a>
               </h3>
               <span className=" text-xs text-gray-500">
-                {dayjs(updatedDate).format("MMMM D, YYYY")}
+                {dayjs(updatedDate).format('MMMM D, YYYY')}
               </span>
             </div>
             {skippedCount > 0 && (
               <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-100 text-xs text-blue-600">
-                {scrapedCount} result{scrapedCount !== 1 ? "s" : ""} scraped
-                {" • "}
-                {skippedCount} position{skippedCount !== 1 ? "s" : ""} skipped
-                {" (scrape strategy limits pages checked)"}
+                {scrapedCount} result{scrapedCount !== 1 ? 's' : ''} scraped
+                {' • '}
+                {skippedCount} position{skippedCount !== 1 ? 's' : ''} skipped
+                {' (scrape strategy limits pages checked)'}
               </div>
             )}
             <div
               className="keywordDetails__section__results styled-scrollbar overflow-y-auto"
               ref={searchResultContainer}
             >
-              {resultSegments.length > 0 &&
-                resultSegments.map((seg, idx) => {
-                  if (seg.type === "skipped") {
+              {resultSegments.length > 0
+                && resultSegments.map((seg, idx) => {
+                  if (seg.type === 'skipped') {
                     const pageFrom = Math.ceil(seg.from / 10);
                     const pageTo = Math.ceil(seg.to / 10);
                     const count = seg.to - seg.from + 1;
-                    const pagesLabel =
-                      pageFrom === pageTo
+                    const pagesLabel = pageFrom === pageTo
                         ? `Page ${pageFrom}`
                         : `Pages ${pageFrom}–${pageTo}`;
                     return (
                       <div
                         key={`skipped-${seg.from}`}
                         className={
-                          "leading-6 mb-4 mr-3 px-3 py-2 text-sm rounded " +
-                          "bg-gray-50 border border-dashed border-gray-200 text-gray-400 italic"
+                          'leading-6 mb-4 mr-3 px-3 py-2 text-sm rounded '
+                          + 'bg-gray-50 border border-dashed border-gray-200 text-gray-400 italic'
                         }
                       >
-                        {pagesLabel}: {count} result{count !== 1 ? "s" : ""}{" "}
+                        {pagesLabel}: {count} result{count !== 1 ? 's' : ''}{' '}
                         skipped
                       </div>
                     );
                   }
                   const { position } = keyword;
-                  const domainExist =
-                    position > 0 && seg.item.position === position;
+                  const domainExist = position > 0 && seg.item.position === position;
                   return (
                     <div
                       ref={domainExist ? searchResultFound : null}
                       className={`leading-6 mb-4 mr-3 p-3 text-sm break-all pr-3 rounded 
                               ${
                                 domainExist
-                                  ? " bg-amber-50 border border-amber-200"
-                                  : ""
+                                  ? ' bg-amber-50 border border-amber-200'
+                                  : ''
                               }`}
                       key={seg.item.url + seg.item.position}
                     >
