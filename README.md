@@ -3,43 +3,36 @@
 # SerpBear
 
 ![GitHub](https://img.shields.io/github/license/gigerIT/serpbear?style=for-the-badge) ![GitHub package.json version](https://img.shields.io/github/package-json/v/gigerIT/serpbear?style=for-the-badge) ![Docker Pulls](https://img.shields.io/docker/pulls/gigeritch/serpbear?style=for-the-badge)
-s
 
-#### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Fork Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
+SerpBear is the actively maintained, newer fork of the original [SerpBear](https://github.com/towfiqi/serpbear). If you want the version with current fixes, compatibility updates, and ongoing releases, start here.
 
-SerpBear is an Open Source Search Engine Position Tracking and Keyword Research App. It allows you to track your website's keyword positions in Google and get notified of their position change.
+This fork is used for client projects and is maintained with production use in mind. The goal is to preserve what made SerpBear useful while continuing to ship bug fixes, infrastructure updates, and new features.
 
-#### This Fork
-
-This repository is a maintained fork of the original [SerpBear](https://github.com/towfiqi/serpbear). We rely on SerpBear for client projects, so we are committed to keeping this fork current, stable, and actively improved.
-
-This is not meant as criticism of the original maintainer. Open source maintainers often have limited time and more important priorities. We appreciate the original project and the work behind it. Our goal with this fork is to keep shipping bug fixes, compatibility updates, and new features for teams that depend on SerpBear in production.
+#### [Documentation](https://docs.serpbear.com/) | [Changelog](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md) | [Releases](https://github.com/gigerIT/serpbear/releases) | [Docker Image](https://hub.docker.com/r/gigeritch/serpbear)
 
 ![Easy to Use Search Engine Rank Tracker](https://serpbear.b-cdn.net/serpbear_readme_v2.gif)
 
-#### Features
+## Why This Fork
 
-- **Unlimited Keywords:** Add unlimited domains and unlimited keywords to track their SERP.
-- **Email Notification:** Get notified of your keyword position changes daily/weekly/monthly through email.
-- **SERP API:** SerpBear comes with built-in API that you can use for your marketing & data reporting tools.
-- **Keyword Research:** Ability to research keywords and auto-generate keyword ideas from your tracked website's content by integrating your Google Ads test account.
-- **Google Search Console Integration:** Get the actual visit count, impressions & more for Each keyword.
-- **Mobile App:** Add the PWA app to your mobile for a better mobile experience.
-- **Zero Cost to RUN:** Run the App on mogenius.com or Fly.io for free.
+- **Maintained and current:** This is the version intended for users who want a newer, actively improved SerpBear.
+- **Production-focused:** It is kept working for real deployments with compatibility updates, bug fixes, and continued releases.
+- **Same core product, better maintained:** Self-hosted rank tracking, keyword research, notifications, and integrations remain the focus.
+- **Built on the original project:** This fork exists to continue the work respectfully and keep it useful for teams that depend on it.
 
-#### How it Works
+## What You Get
 
-The App uses third party website scrapers like ScrapingAnt, ScrapingRobot, SearchApi, SerpApi, HasData or Your given Proxy ips to scrape google search results to see if your domain appears in the search result for the given keyword.
+- Track Google keyword positions for your domains.
+- Send scheduled email notifications about ranking changes.
+- Use the built-in API for reporting and automation.
+- Generate keyword ideas and search-volume data through Google Ads integration.
+- Pull visits, impressions, and related query data from Google Search Console.
+- Install it like an app on mobile devices using the included web app manifest.
 
-The Keyword Research and keyword generation feature works by integrating your Google Ads test accounts into SerpBear. You can also view the added keyword's monthly search volume data once you [integrate Google Ads](https://docs.serpbear.com/miscellaneous/integrate-google-ads).
+## Quick Start With Docker
 
-When you [integrate Google Search Console](https://docs.serpbear.com/miscellaneous/integrate-google-search-console), the app shows actual search visits for each tracked keywords. You can also discover new keywords, and find the most performing keywords, countries, pages.you will be able to view the actual visits count from Google Search for the tracked keywords.
+The fastest way to run this fork is with the published Docker image: [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
 
-#### Install
-
-The easiest way to run this fork is with our Docker image on Docker Hub: [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
-
-Use `latest` for the newest stable fork release, or pin a version tag for predictable deployments.
+Use `latest` for the newest stable fork release, or pin a specific tag for predictable deployments.
 
 ```bash
 docker pull gigeritch/serpbear:latest
@@ -78,51 +71,100 @@ volumes:
   serpbear_data:
 ```
 
-After the container starts, open `http://localhost:3000` and log in with the credentials you configured.
+After the container starts, open `http://localhost:3000` and sign in with the credentials you configured.
 
-#### Getting Started
+### Important Runtime Notes
 
-- **Step 1:** Install and run the App, preferably with the Docker image above.
-- **Step 2:** Access your App and Login.
-- **Step 3:** Add your First domain.
-- **Step 4:** Pick a SERP provider from the list below. Several offer a free tier, or you can skip this step and use your own proxy IPs.
-- **Step 5:** Setup the Scraping API/Proxy from the App's Settings interface.
-- **Step 6:** Add your keywords and start tracking.
-- **Step 7:** Optional. From the Settings panel, setup SMTP details to get notified of your keywords positions through email. You can use ElasticEmail and Sendpulse SMTP services that are free.
+- `NEXT_PUBLIC_APP_URL` must point to the running app URL. The cron worker calls the app's own API over HTTP and depends on this being correct.
+- Persist `/app/data` so your SQLite database and runtime files survive container restarts.
+- Use long random values for `SECRET` and `APIKEY` in any real deployment.
 
-#### SerpBear Integrates with popular SERP scraping services
+## Getting Started
 
-If you don't want to use proxies, you can use third party Scraping services to scrape Google Search results.
+1. Run the app and sign in.
+2. Add your first domain.
+3. Choose a SERP data source or use your own proxy IPs.
+4. Configure that provider from the Settings page.
+5. Add keywords and start tracking.
+6. Optionally configure SMTP settings for email notifications.
+7. Optionally connect Google Ads and Google Search Console for keyword ideas, search volume, and search analytics data.
 
-| Service           | Pricing                              | Free tier             | Included usage         | API |
-| ----------------- | ------------------------------------ | --------------------- | ---------------------- | --- |
-| hasdata.com       | From $49/mo                          | 1,000 requests/mo     | 200,000 requests/mo    | Yes |
-| scrapingant.com   | From $19/mo                          | 10,000 API credits/mo | 100,000 API credits/mo | Yes |
-| scrapingrobot.com | Usage-based from $0.00004/request    | 5,000 requests/mo     | Pay as you go          | Yes |
-| searchapi.io      | From $40/mo                          | 100 requests          | 10,000 searches/mo     | Yes |
-| serpapi.com       | From $25/mo                          | 250 searches/mo       | 1,000 searches/mo      | Yes |
-| serper.dev        | Usage-based from $0.30/1,000 queries | 2,500 queries         | Pay as you go          | Yes |
-| serply.io         | From $50/mo                          | 300 requests/mo       | 50,000 requests/mo     | Yes |
-| spaceserp.com     | From $14.99/mo                       | None found            | 1,000 searches/mo      | Yes |
-| valueserp.com     | From $50/mo                          | Free trial            | 25,000 credits/mo      | Yes |
+## Supported SERP Data Sources
 
-Pricing and free-tier details were checked against the providers' public pricing pages on 2026-03-25 and may change over time.
+SerpBear can use your own proxies or these built-in integrations:
 
-**Tech Stack**
+- Scraping Robot
+- ScrapingAnt
+- SerpApi.com
+- Serply
+- Space Serp
+- SearchApi.io
+- Value Serp
+- Serper.dev
+- HasData
+- CrazySERP
 
-- Next.js for Frontend & Backend.
-- Sqlite for Database.
+If you want a quick free-tier comparison, keep this as a starting point and verify current limits on each provider's site before choosing one:
 
-#### Releases
+| Service           | Free tier             | Pricing                              | Included usage         | API |
+| ----------------- | --------------------- | ------------------------------------ | ---------------------- | --- |
+| hasdata.com       | 1,000 requests/mo     | From $49/mo                          | 200,000 requests/mo    | Yes |
+| scrapingant.com   | 10,000 credits/mo     | From $19/mo                          | 100,000 credits/mo     | Yes |
+| scrapingrobot.com | 5,000 requests/mo     | Usage-based from $0.00004/request    | Pay as you go          | Yes |
+| searchapi.io      | 100 requests          | From $40/mo                          | 10,000 searches/mo     | Yes |
+| serpapi.com       | 250 searches/mo       | From $25/mo                          | 1,000 searches/mo      | Yes |
+| serper.dev        | 2,500 queries         | Usage-based from $0.30/1,000 queries | Pay as you go          | Yes |
+| serply.io         | 300 requests/mo       | From $50/mo                          | 50,000 requests/mo     | Yes |
+| spaceserp.com     | -                     | From $14.99/mo                       | 1,000 searches/mo      | Yes |
+| valueserp.com     | Free trial            | From $50/mo                          | 25,000 credits/mo      | Yes |
+| crazyserp.com     | -                     | From $50/mo                          | 25,000 credits/mo      | Yes |
 
-- Source code releases are published in [`gigerIT/serpbear` releases](https://github.com/gigerIT/serpbear/releases).
-- Docker images are published on Docker Hub at [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
-- We recommend pinning a version tag in production and moving to newer releases on your own schedule.
+CrazySERP is also supported in-app, but its pricing and free-tier details are not listed here because they were not documented in the previous README.
 
-#### Release Automation
+Pricing and free-tier details above were checked against providers' public pricing pages on 2026-03-25 and may change over time.
 
-- GitHub Actions runs CI on every pull request and push to `main`.
-- [`release-please`](https://github.com/googleapis/release-please) creates or updates the release PR after releasable commits land on `main`.
-- Merging that release PR automatically creates the GitHub release, rebuilds the released tag, and publishes Docker images to the configured Docker Hub repository.
-- Required repository secrets: `RELEASE_PLEASE_TOKEN`, `DOCKERHUB_TOKEN`.
-- Required repository variables: `DOCKERHUB_USERNAME`, `DOCKERHUB_REPOSITORY`.
+## How It Works
+
+- The app checks Google search results through a supported scraping provider or your own proxies.
+- Position history is stored locally using SQLite, with runtime state kept under `data/`.
+- A separate `cron.js` worker triggers scheduled scraping, notifications, retry jobs, and Search Console refreshes through the app's API using `APIKEY`.
+- Google Ads integration powers keyword research features, and Google Search Console integration adds search analytics data to tracked domains and keywords.
+
+## Local Development
+
+### Requirements
+
+- Node.js `22.11.0`
+- `npm ci`
+- A local `.env.local` file based on `.env.example`
+
+### Common Commands
+
+```bash
+npm ci
+npm run dev
+npm run cron
+npm run lint
+npm run test:ci
+npm run build
+```
+
+Database migrations are available through:
+
+```bash
+npm run db:migrate
+```
+
+## Tech Stack
+
+- Next.js 12 Pages Router
+- React 18 + TypeScript
+- Tailwind CSS
+- SQLite with `sequelize-typescript`
+- A separate cron worker for scheduled jobs
+
+## Releases
+
+- Source releases are published at [`gigerIT/serpbear` releases](https://github.com/gigerIT/serpbear/releases).
+- Docker images are published at [`gigeritch/serpbear`](https://hub.docker.com/r/gigeritch/serpbear).
+- The full release history is tracked in [`CHANGELOG.md`](https://github.com/gigerIT/serpbear/blob/main/CHANGELOG.md).
