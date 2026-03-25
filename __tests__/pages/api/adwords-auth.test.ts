@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const mockState = {
   generateAuthUrl: jest.fn(),
@@ -7,39 +7,55 @@ const mockState = {
   decrypt: jest.fn((value: string) => `decrypted-${value}`),
   encrypt: jest.fn((value: string) => `encrypted-${value}`),
   clearAdwordsAccessTokenCache: jest.fn(),
+  cookieSet: jest.fn(),
+  cookieGet: jest.fn(),
+  randomBytes: jest.fn(() => ({
+    toString: jest.fn(() => "oauth-state-token"),
+  })),
 };
 
-jest.mock('google-auth-library', () => ({
+jest.mock("crypto", () => ({
+  randomBytes: (size: number) => (mockState.randomBytes as any)(size),
+}));
+
+jest.mock("cookies", () =>
+  jest.fn().mockImplementation(() => ({
+    set: mockState.cookieSet,
+    get: mockState.cookieGet,
+  }))
+);
+
+jest.mock("google-auth-library", () => ({
   OAuth2Client: jest.fn(() => ({
     generateAuthUrl: mockState.generateAuthUrl,
   })),
 }));
 
-jest.mock('fs/promises', () => ({
+jest.mock("fs/promises", () => ({
   readFile: mockState.readFile,
   writeFile: mockState.writeFile,
 }));
 
-jest.mock('../../../utils/verifyUser', () => ({
+jest.mock("../../../utils/verifyUser", () => ({
   __esModule: true,
-  default: jest.fn(() => 'authorized'),
+  default: jest.fn(() => "authorized"),
 }));
 
-jest.mock('cryptr', () =>
+jest.mock("cryptr", () =>
   jest.fn().mockImplementation(() => ({
     decrypt: mockState.decrypt,
     encrypt: mockState.encrypt,
-  })),
+  }))
 );
 
-jest.mock('../../../utils/adwords', () => ({
+jest.mock("../../../utils/adwords", () => ({
   clearAdwordsAccessTokenCache: mockState.clearAdwordsAccessTokenCache,
 }));
 
 const { OAuth2Client: mockOAuth2Client } = jest.requireMock(
-  'google-auth-library',
+  "google-auth-library"
 );
-const handler = require('../../../pages/api/adwords/auth').default;
+const handler = require("../../../pages/api/adwords/auth").default;
 
 type MockResponse = {
   statusCode: number;
@@ -65,33 +81,33 @@ const createResponse = () => {
   return res;
 };
 
-describe('/api/adwords/auth', () => {
+describe("/api/adwords/auth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.SECRET = 'test-secret';
+    process.env.SECRET = "test-secret";
     mockState.readFile.mockResolvedValue(
       JSON.stringify({
-        adwords_refresh_token: 'encrypted-old-refresh-token',
-        adwords_developer_token: 'encrypted-developer-token',
-      }),
+        adwords_refresh_token: "encrypted-old-refresh-token",
+        adwords_developer_token: "encrypted-developer-token",
+      })
     );
     mockState.writeFile.mockResolvedValue(undefined);
     mockState.generateAuthUrl.mockReturnValue(
-      'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent',
+      "https://accounts.google.com/o/oauth2/v2/auth?prompt=consent"
     );
   });
 
-  it('stores credentials, clears stale refresh token, and returns a consent auth URL', async () => {
+  it("stores credentials, clears stale refresh token, and returns a consent auth URL", async () => {
     const req = {
-      method: 'POST',
+      method: "POST",
       body: {
-        client_id: 'client-id',
-        client_secret: 'client-secret',
+        client_id: "client-id",
+        client_secret: "client-secret",
       },
       headers: {
-        host: 'internal:3000',
-        'x-forwarded-proto': 'https',
-        'x-forwarded-host': 'serp.example.com',
+        host: "internal:3000",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -99,39 +115,51 @@ describe('/api/adwords/auth', () => {
     await handler(req, res as unknown as NextApiResponse);
 
     expect(mockOAuth2Client).toHaveBeenCalledWith(
-      'client-id',
-      'client-secret',
-      'https://serp.example.com/api/adwords',
+      "client-id",
+      "client-secret",
+      "https://serp.example.com/api/adwords"
     );
     expect(mockState.generateAuthUrl).toHaveBeenCalledWith({
-      access_type: 'offline',
-      prompt: 'consent',
+      access_type: "offline",
+      prompt: "consent",
       include_granted_scopes: true,
-      scope: ['https://www.googleapis.com/auth/adwords'],
+      scope: ["https://www.googleapis.com/auth/adwords"],
+      state: "oauth-state-token",
     });
+    expect(mockState.cookieSet).toHaveBeenCalledWith(
+      "adwords_oauth_state",
+      "oauth-state-token",
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/api/adwords",
+        secure: true,
+        maxAge: 600000,
+      })
+    );
     expect(mockState.clearAdwordsAccessTokenCache).toHaveBeenCalled();
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
-      authURL: 'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent',
+      authURL: "https://accounts.google.com/o/oauth2/v2/auth?prompt=consent",
     });
 
     const writePayload = JSON.parse(mockState.writeFile.mock.calls[0][1]);
-    expect(writePayload.adwords_client_id).toBe('encrypted-client-id');
-    expect(writePayload.adwords_client_secret).toBe('encrypted-client-secret');
-    expect(writePayload.adwords_refresh_token).toBe('');
+    expect(writePayload.adwords_client_id).toBe("encrypted-client-id");
+    expect(writePayload.adwords_client_secret).toBe("encrypted-client-secret");
+    expect(writePayload.adwords_refresh_token).toBe("");
     expect(writePayload.adwords_developer_token).toBe(
-      'encrypted-developer-token',
+      "encrypted-developer-token"
     );
   });
 
-  it('rejects missing credentials', async () => {
+  it("rejects missing credentials", async () => {
     const req = {
-      method: 'POST',
+      method: "POST",
       body: {
-        client_id: 'client-id',
+        client_id: "client-id",
       },
       headers: {
-        host: 'serp.example.com',
+        host: "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -140,7 +168,7 @@ describe('/api/adwords/auth', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({
-      error: 'Please Provide the Google Ads Client ID and Client Secret',
+      error: "Please Provide the Google Ads Client ID and Client Secret",
     });
     expect(mockState.writeFile).not.toHaveBeenCalled();
   });

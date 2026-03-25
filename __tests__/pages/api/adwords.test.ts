@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const mockState = {
   getToken: jest.fn(),
@@ -7,48 +7,57 @@ const mockState = {
   decrypt: jest.fn((value: string) => `decrypted-${value}`),
   encrypt: jest.fn((value: string) => `encrypted-${value}`),
   clearAdwordsAccessTokenCache: jest.fn(),
+  cookieSet: jest.fn(),
+  cookieGet: jest.fn(),
 };
 
-jest.mock('google-auth-library', () => ({
+jest.mock("cookies", () =>
+  jest.fn().mockImplementation(() => ({
+    set: mockState.cookieSet,
+    get: mockState.cookieGet,
+  }))
+);
+
+jest.mock("google-auth-library", () => ({
   OAuth2Client: jest.fn(() => ({
     getToken: mockState.getToken,
   })),
 }));
 
-jest.mock('fs/promises', () => ({
+jest.mock("fs/promises", () => ({
   readFile: mockState.readFile,
   writeFile: mockState.writeFile,
 }));
 
-jest.mock('../../../database/database', () => ({
+jest.mock("../../../database/database", () => ({
   __esModule: true,
   default: {
     sync: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
-jest.mock('../../../utils/verifyUser', () => ({
+jest.mock("../../../utils/verifyUser", () => ({
   __esModule: true,
-  default: jest.fn(() => 'authorized'),
+  default: jest.fn(() => "authorized"),
 }));
 
-jest.mock('cryptr', () =>
+jest.mock("cryptr", () =>
   jest.fn().mockImplementation(() => ({
     decrypt: mockState.decrypt,
     encrypt: mockState.encrypt,
-  })),
+  }))
 );
 
-jest.mock('../../../utils/adwords', () => ({
+jest.mock("../../../utils/adwords", () => ({
   clearAdwordsAccessTokenCache: mockState.clearAdwordsAccessTokenCache,
   getAdwordsCredentials: jest.fn(),
   getAdwordsKeywordIdeas: jest.fn(),
 }));
 
 const { OAuth2Client: mockOAuth2Client } = jest.requireMock(
-  'google-auth-library',
+  "google-auth-library"
 );
-const handler = require('../../../pages/api/adwords').default;
+const handler = require("../../../pages/api/adwords").default;
 
 type MockResponse = {
   statusCode: number;
@@ -79,40 +88,41 @@ const createResponse = () => {
   return res;
 };
 
-describe('/api/adwords', () => {
+describe("/api/adwords", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = {
       ...originalEnv,
-      SECRET: 'test-secret',
-      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      SECRET: "test-secret",
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000",
     };
     mockState.readFile.mockResolvedValue(
       JSON.stringify({
-        adwords_client_id: 'client-id',
-        adwords_client_secret: 'client-secret',
-      }),
+        adwords_client_id: "client-id",
+        adwords_client_secret: "client-secret",
+      })
     );
     mockState.writeFile.mockResolvedValue(undefined);
     mockState.getToken.mockResolvedValue({
-      tokens: { refresh_token: 'refresh-token' },
+      tokens: { refresh_token: "refresh-token" },
     });
+    mockState.cookieGet.mockReturnValue("oauth-state-token");
   });
 
   afterAll(() => {
     process.env = originalEnv;
   });
 
-  it('uses forwarded request headers instead of NEXT_PUBLIC_APP_URL for the OAuth callback', async () => {
+  it("uses forwarded request headers instead of NEXT_PUBLIC_APP_URL for the OAuth callback", async () => {
     const req = {
-      method: 'GET',
-      query: { code: 'auth-code' },
+      method: "GET",
+      query: { code: "auth-code", state: "oauth-state-token" },
       headers: {
-        host: 'internal:3000',
-        'x-forwarded-proto': 'https',
-        'x-forwarded-host': 'serp.example.com',
+        host: "internal:3000",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -120,32 +130,68 @@ describe('/api/adwords', () => {
     await handler(req, res as unknown as NextApiResponse);
 
     expect(mockOAuth2Client).toHaveBeenCalledWith(
-      'decrypted-client-id',
-      'decrypted-client-secret',
-      'https://serp.example.com/api/adwords',
+      "decrypted-client-id",
+      "decrypted-client-secret",
+      "https://serp.example.com/api/adwords"
+    );
+    expect(mockState.cookieSet).toHaveBeenCalledWith(
+      "adwords_oauth_state",
+      undefined,
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/api/adwords",
+        secure: true,
+      })
     );
     expect(res.statusCode).toBe(200);
     expect(res.body).toBe(
-      'Google Ads Integrated Successfully! You can close this window.',
+      "Google Ads Integrated Successfully! You can close this window."
     );
   });
 
-  it('reports redirect_uri_mismatch details without crashing on the resolved callback URL', async () => {
+  it("rejects callbacks with a missing OAuth state before exchanging the code", async () => {
+    const req = {
+      method: "GET",
+      query: { code: "auth-code" },
+      headers: {
+        host: "serp.example.com",
+      },
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.getToken).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toBe(
+      "Invalid or expired Google Ads OAuth state. Please Try Again!"
+    );
+    expect(mockState.cookieSet).toHaveBeenCalledWith(
+      "adwords_oauth_state",
+      undefined,
+      expect.objectContaining({
+        path: "/api/adwords",
+      })
+    );
+  });
+
+  it("reports redirect_uri_mismatch details without crashing on the resolved callback URL", async () => {
     mockState.getToken.mockRejectedValue({
       response: {
         data: {
-          error: 'redirect_uri_mismatch',
+          error: "redirect_uri_mismatch",
         },
       },
     });
 
     const req = {
-      method: 'GET',
-      query: { code: 'auth-code' },
+      method: "GET",
+      query: { code: "auth-code", state: "oauth-state-token" },
       headers: {
-        host: 'internal:3000',
-        'x-forwarded-proto': 'https',
-        'x-forwarded-host': 'serp.example.com',
+        host: "internal:3000",
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -154,18 +200,18 @@ describe('/api/adwords', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toBe(
-      'Error Saving the Google Ads Refresh Token. Details: redirect_uri_mismatch Redirected URL: https://serp.example.com/api/adwords. Please Try Again!',
+      "Error Saving the Google Ads Refresh Token. Details: redirect_uri_mismatch Redirected URL: https://serp.example.com/api/adwords. Please Try Again!"
     );
   });
 
-  it('handles unknown Google error shapes without throwing', async () => {
-    mockState.getToken.mockRejectedValue(new Error('Unexpected failure'));
+  it("handles unknown Google error shapes without throwing", async () => {
+    mockState.getToken.mockRejectedValue(new Error("Unexpected failure"));
 
     const req = {
-      method: 'GET',
-      query: { code: 'auth-code' },
+      method: "GET",
+      query: { code: "auth-code", state: "oauth-state-token" },
       headers: {
-        host: 'serp.example.com',
+        host: "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -174,20 +220,20 @@ describe('/api/adwords', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toBe(
-      'Error Saving the Google Ads Refresh Token. Please Try Again!',
+      "Error Saving the Google Ads Refresh Token. Please Try Again!"
     );
   });
 
-  it('fails gracefully when Google does not return a refresh token', async () => {
+  it("fails gracefully when Google does not return a refresh token", async () => {
     mockState.getToken.mockResolvedValue({
-      tokens: { access_token: 'access-token' },
+      tokens: { access_token: "access-token" },
     });
 
     const req = {
-      method: 'GET',
-      query: { code: 'auth-code' },
+      method: "GET",
+      query: { code: "auth-code", state: "oauth-state-token" },
       headers: {
-        host: 'serp.example.com',
+        host: "serp.example.com",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -196,7 +242,7 @@ describe('/api/adwords', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toBe(
-      'Error Getting the Google Ads Refresh Token. Please Try Again!',
+      "Error Getting the Google Ads Refresh Token. Please Try Again!"
     );
     expect(mockState.writeFile).not.toHaveBeenCalled();
     expect(mockState.clearAdwordsAccessTokenCache).not.toHaveBeenCalled();
