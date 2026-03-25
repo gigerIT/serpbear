@@ -109,7 +109,7 @@ const buildScraperError = (responseBody: any): string => {
   }
 
   const statusCode =
-    responseBody.status ?? responseBody.request_info?.status_code ?? null;
+    responseBody.request_info?.status_code ?? responseBody.status ?? null;
   const details = [
     responseBody.request_info?.error,
     responseBody.error_message,
@@ -290,6 +290,7 @@ export const getScraperClient = (
   keyword: KeywordType,
   settings: SettingsType,
   scraper?: ScraperSettings,
+  retryAttempt: number = 0,
   pagination?: ScraperPagination
 ): Promise<AxiosResponse | Response> | false => {
   let apiURL = "";
@@ -333,7 +334,11 @@ export const getScraperClient = (
     const axiosConfig: CreateAxiosDefaults = {};
     headers.Accept = "gzip,deflate,compress;";
     axiosConfig.headers = headers;
-    const proxies = settings.proxy.split(/\r?\n|\r|\n/g);
+    axiosConfig.timeout = resolveFetchTimeoutMs(scraper, retryAttempt);
+    axiosConfig.maxRedirects = 3;
+    const proxies = settings.proxy
+      .split(/\r?\n|\r|\n/g)
+      .filter((proxy) => proxy.trim());
     let proxyURL = "";
     if (proxies.length > 1) {
       proxyURL = proxies[Math.floor(Math.random() * proxies.length)];
@@ -355,14 +360,20 @@ export const getScraperClient = (
     const requestOptions = scraper?.requestOptions
       ? scraper.requestOptions(keyword, settings, countries, pagination)
       : {};
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      resolveFetchTimeoutMs(scraper, retryAttempt)
+    );
     client = fetch(apiURL, {
       method: "GET",
       ...requestOptions,
+      signal: controller.signal,
       headers: {
         ...headers,
         ...(requestOptions.headers || {}),
       },
-    });
+    }).finally(() => clearTimeout(timeoutId));
   }
 
   return client;
@@ -375,83 +386,88 @@ const scrapeSinglePage = async (
   keyword: KeywordType,
   settings: SettingsType,
   scraperObj: ScraperSettings | undefined,
-  pagination: ScraperPagination
+  pagination: ScraperPagination,
+  maxRetries: number = DEFAULT_RETRY_ATTEMPTS
 ): Promise<ScrapePageResult> => {
   const scraperType = settings?.scraper_type || "";
-  const scraperClient = getScraperClient(
-    keyword,
-    settings,
-    scraperObj,
-    pagination
-  );
-  if (!scraperClient) {
-    return {
-      results: [],
-      error: `Unable to create scraper client for scraperType="${
-        scraperType || "unknown"
-      }"`,
-    };
-  }
-  try {
-    const res =
-      scraperType === "proxy" && settings.proxy
-        ? await scraperClient
-        : await scraperClient.then((result: any) => result.json());
-    const scraperResult =
-      scraperObj?.resultObjectKey && res[scraperObj.resultObjectKey]
-        ? res[scraperObj.resultObjectKey]
-        : "";
-    const scrapeResult: string =
-      res.data || res.html || res.results || scraperResult || "";
-    if (res && scrapeResult) {
-      const extracted = scraperObj?.serpExtractor
-        ? scraperObj.serpExtractor(scrapeResult)
-        : extractScrapedResult(scrapeResult, keyword.device);
-      return {
-        results: extracted.map((item, i) => ({
-          ...item,
-          position: pagination.start + i + 1,
-        })),
-      };
+  let finalError = `Unable to create scraper client for scraperType="${
+    scraperType || "unknown"
+  }"`;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const scraperClient = getScraperClient(
+      keyword,
+      settings,
+      scraperObj,
+      attempt,
+      pagination
+    );
+
+    if (!scraperClient) {
+      return { results: [], error: finalError };
     }
 
-    const emptyResponseError = `Scraper response did not include usable result content: ${stringifyErrorDetails(
-      {
-        hasData: Boolean((res as any)?.data),
-        hasHtml: Boolean((res as any)?.html),
-        hasResults: Boolean((res as any)?.results),
-        detail: (res as any)?.detail,
-        error: (res as any)?.error,
-        resultObjectKey: scraperObj?.resultObjectKey || null,
+    try {
+      const response = await scraperClient;
+      const parsedResponse = await parseScraperResponse(
+        response,
+        scraperType === "proxy" && Boolean(settings.proxy)
+      );
+      const responseBody = normalizeScraperBody(parsedResponse);
+
+      if (hasScraperError(responseBody)) {
+        finalError = buildScraperError(responseBody);
+        if (attempt < maxRetries) {
+          await sleepForRetry(attempt);
+          continue;
+        }
+        break;
       }
-    )}`;
-    logScrapeError(
-      "Scraping page failed",
-      {
-        keyword,
-        scraperType,
-        scraperObj,
-        page: pagination.page,
-        pagination,
-      },
-      new Error(emptyResponseError)
-    );
-    return { results: [], error: emptyResponseError };
-  } catch (error: any) {
-    const message = getErrorMessage(error);
-    logScrapeError(
-      "Scraping page failed",
-      {
-        keyword,
-        scraperType,
-        scraperObj,
-        page: pagination.page,
-        pagination,
-      },
-      error
-    );
-    return { results: [], error: message };
+
+      const scrapeResult = getScrapeResultPayload(responseBody, scraperObj);
+      if (responseBody && scrapeResult) {
+        const extracted = scraperObj?.serpExtractor
+          ? scraperObj.serpExtractor(scrapeResult)
+          : extractScrapedResult(scrapeResult, keyword.device);
+        return {
+          results: extracted.map((item, i) => ({
+            ...item,
+            position: pagination.start + i + 1,
+          })),
+        };
+      }
+
+      finalError = `Scraper response did not include usable result content: ${stringifyErrorDetails(
+        {
+          hasData: Boolean(responseBody?.data),
+          hasHtml: Boolean(responseBody?.html),
+          hasResults: Boolean(responseBody?.results),
+          detail: responseBody?.detail,
+          error: responseBody?.error,
+          resultObjectKey: scraperObj?.resultObjectKey || null,
+        }
+      )}`;
+    } catch (error: any) {
+      finalError = getErrorMessage(error);
+    }
+
+    if (attempt < maxRetries) {
+      await sleepForRetry(attempt);
+    }
   }
+
+  logScrapeError(
+    "Scraping page failed",
+    {
+      keyword,
+      scraperType,
+      scraperObj,
+      page: pagination.page,
+      pagination,
+    },
+    new Error(finalError)
+  );
+  return { results: [], error: finalError };
 };
 
 /**
@@ -647,7 +663,8 @@ export const scrapeKeywordWithStrategy = async (
  */
 export const scrapeKeywordFromGoogle = async (
   keyword: KeywordType,
-  settings: SettingsType
+  settings: SettingsType,
+  maxRetries: number = DEFAULT_RETRY_ATTEMPTS
 ): Promise<RefreshResult> => {
   let refreshedResults: RefreshResult = {
     ID: keyword.ID,
@@ -662,96 +679,102 @@ export const scrapeKeywordFromGoogle = async (
     (scraper: ScraperSettings) => scraper.id === scraperType
   );
   const nativePagination: ScraperPagination = { start: 0, num: 100, page: 1 };
-  const scraperClient = getScraperClient(
-    keyword,
-    settings,
-    scraperObj,
-    nativePagination
-  );
-
-  if (!scraperClient) {
-    return false;
+  if (!scraperObj) {
+    return {
+      ...refreshedResults,
+      error: `Unknown scraper type: ${scraperType || "unknown"}`,
+    };
   }
 
-  let scraperError: any = null;
-  try {
-    const res =
-      scraperType === "proxy" && settings.proxy
-        ? await scraperClient
-        : await scraperClient.then((result: any) => result.json());
-    const scraperResult =
-      scraperObj?.resultObjectKey && res[scraperObj.resultObjectKey]
-        ? res[scraperObj.resultObjectKey]
-        : "";
-    const scrapeResult: string =
-      res.data || res.html || res.results || scraperResult || "";
-    if (res && scrapeResult) {
-      const extracted = scraperObj?.serpExtractor
-        ? scraperObj.serpExtractor(scrapeResult)
-        : extractScrapedResult(scrapeResult, keyword.device);
-      await writeFile("result.txt", JSON.stringify(scrapeResult), {
-        encoding: "utf-8",
-      }).catch((err) => {
-        console.log(err);
-      });
-      const serp = getSerp(keyword.domain, extracted);
-      refreshedResults = {
-        ID: keyword.ID,
-        keyword: keyword.keyword,
-        position: serp.position,
-        url: serp.url,
-        result: extracted,
-        error: false,
-      };
-      logScrapeSuccess("Keyword scraped", {
-        keyword,
-        position: serp.position,
-        url: serp.url,
-      });
-    } else {
-      scraperError = res.detail || res.error || "Unknown Error";
-      throw new Error(
-        `Scraper response did not include usable result content: ${stringifyErrorDetails(
-          {
-            detail: res?.detail,
-            error: res?.error,
-            hasData: Boolean(res?.data),
-            hasHtml: Boolean(res?.html),
-            hasResults: Boolean(res?.results),
-            resultObjectKey: scraperObj?.resultObjectKey || null,
-          }
-        )}`
-      );
-    }
-  } catch (error: any) {
-    refreshedResults.error = scraperError || "Unknown Error";
-    if (
-      settings.scraper_type === "proxy" &&
-      error &&
-      error.response &&
-      error.response.statusText
-    ) {
-      refreshedResults.error = `[${error.response.status}] ${error.response.statusText}`;
-    } else if (settings.scraper_type === "proxy" && error) {
-      refreshedResults.error = getErrorMessage(error);
-    }
+  let finalError = "Unknown Error";
 
-    logScrapeError(
-      "Scraping keyword failed",
-      {
-        keyword,
-        scraperType,
-        scraperObj,
-        page: nativePagination.page,
-        pagination: nativePagination,
-        extra: {
-          scraperError,
-          resultObjectKey: scraperObj?.resultObjectKey || null,
-        },
-      },
-      error
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const scraperClient = getScraperClient(
+      keyword,
+      settings,
+      scraperObj,
+      attempt,
+      nativePagination
     );
+
+    if (!scraperClient) {
+      return false;
+    }
+
+    try {
+      const response = await scraperClient;
+      const parsedResponse = await parseScraperResponse(
+        response,
+        scraperType === "proxy" && Boolean(settings.proxy)
+      );
+      const responseBody = normalizeScraperBody(parsedResponse);
+
+      if (hasScraperError(responseBody)) {
+        finalError = buildScraperError(responseBody);
+        if (attempt < maxRetries) {
+          await sleepForRetry(attempt);
+          continue;
+        }
+        break;
+      }
+
+      const scrapeResult = getScrapeResultPayload(responseBody, scraperObj);
+      if (responseBody && scrapeResult) {
+        const extracted = scraperObj?.serpExtractor
+          ? scraperObj.serpExtractor(scrapeResult)
+          : extractScrapedResult(scrapeResult, keyword.device);
+        const serp = getSerp(keyword.domain, extracted);
+        refreshedResults = {
+          ID: keyword.ID,
+          keyword: keyword.keyword,
+          position: serp.position,
+          url: serp.url,
+          result: extracted,
+          error: false,
+        };
+        logScrapeSuccess("Keyword scraped", {
+          keyword,
+          position: serp.position,
+          url: serp.url,
+        });
+        return refreshedResults;
+      }
+
+      finalError = `Scraper response did not include usable result content: ${stringifyErrorDetails(
+        {
+          detail: responseBody?.detail,
+          error: responseBody?.error,
+          hasData: Boolean(responseBody?.data),
+          hasHtml: Boolean(responseBody?.html),
+          hasResults: Boolean(responseBody?.results),
+          resultObjectKey: scraperObj?.resultObjectKey || null,
+        }
+      )}`;
+    } catch (error: any) {
+      finalError = getErrorMessage(error);
+    }
+
+    if (attempt < maxRetries) {
+      await sleepForRetry(attempt);
+    }
   }
+
+  refreshedResults.error = finalError;
+
+  logScrapeError(
+    "Scraping keyword failed",
+    {
+      keyword,
+      scraperType,
+      scraperObj,
+      page: nativePagination.page,
+      pagination: nativePagination,
+      extra: {
+        resultObjectKey: scraperObj?.resultObjectKey || null,
+      },
+    },
+    new Error(finalError)
+  );
 
   return refreshedResults;
 };
@@ -884,30 +907,7 @@ export const getSerp = (
  * @returns {void}
  */
 export const retryScrape = async (keywordID: number): Promise<void> => {
-  if (!keywordID && !Number.isInteger(keywordID)) {
-    return;
-  }
-  let currentQueue: number[] = [];
-
-  const filePath = `${process.cwd()}/data/failed_queue.json`;
-  const currentQueueRaw = await readFile(filePath, { encoding: "utf-8" }).catch(
-    (err) => {
-      console.log(err);
-      return "[]";
-    }
-  );
-  currentQueue = currentQueueRaw ? JSON.parse(currentQueueRaw) : [];
-
-  if (!currentQueue.includes(keywordID)) {
-    currentQueue.push(Math.abs(keywordID));
-  }
-
-  await writeFile(filePath, JSON.stringify(currentQueue), {
-    encoding: "utf-8",
-  }).catch((err) => {
-    console.log(err);
-    return "[]";
-  });
+  await retryQueueManager.addToQueue(keywordID);
 };
 
 /**
@@ -918,25 +918,5 @@ export const retryScrape = async (keywordID: number): Promise<void> => {
 export const removeFromRetryQueue = async (
   keywordID: number
 ): Promise<void> => {
-  if (!keywordID && !Number.isInteger(keywordID)) {
-    return;
-  }
-  let currentQueue: number[] = [];
-
-  const filePath = `${process.cwd()}/data/failed_queue.json`;
-  const currentQueueRaw = await readFile(filePath, { encoding: "utf-8" }).catch(
-    (err) => {
-      console.log(err);
-      return "[]";
-    }
-  );
-  currentQueue = currentQueueRaw ? JSON.parse(currentQueueRaw) : [];
-  currentQueue = currentQueue.filter((item) => item !== Math.abs(keywordID));
-
-  await writeFile(filePath, JSON.stringify(currentQueue), {
-    encoding: "utf-8",
-  }).catch((err) => {
-    console.log(err);
-    return "[]";
-  });
+  await retryQueueManager.removeFromQueue(keywordID);
 };

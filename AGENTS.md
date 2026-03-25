@@ -63,6 +63,7 @@
 - `NEXT_PUBLIC_APP_URL` must point at the running app or cron-triggered requests will fail.
 - Reverse-proxy deployments should forward `X-Forwarded-Proto` and `X-Forwarded-Host`; Google Ads redirects use those headers for the public callback URL, and secure cookies only trust actual TLS or forwarded HTTPS.
 - `data/` is writable application state; never commit local runtime contents or build logic that assumes those files already exist.
+- Scrape failures now persist through a lock-protected, atomically written `data/failed_queue.json`; keep that file as a JSON array of positive keyword IDs if you touch retry handling.
 - `ideas/v-serpbear/` is a nested workspace/reference copy, not part of the root app's lint, Jest, or TypeScript scope.
 - Google SERP HTML can arrive in multiple layouts through ScrapingRobot; when touching `utils/scraper.ts`, prefer actual web-result cards and avoid counting video/image/AI modules as organic results.
 - Release automation uses `release-please`; commit types `feat`, `fix`, `perf`, and `deps` feed the changelog. Keep `include-component-in-tag` disabled so GitHub tags stay in the existing plain `vX.Y.Z` format.
