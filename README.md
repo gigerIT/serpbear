@@ -93,16 +93,17 @@ After the container starts, open `http://localhost:3000` and log in with the cre
 
 If you don't want to use proxies, you can use third party Scraping services to scrape Google Search results.
 
-| Service           | Pricing                              | Free tier         | Included usage      | API |
-| ----------------- | ------------------------------------ | ----------------- | ------------------- | --- |
-| hasdata.com       | From $49/mo                          | 1,000 requests/mo | 200,000 requests/mo | Yes |
-| scrapingrobot.com | Usage-based from $0.00004/request    | 5,000 queries/mo  | Pay as you go       | Yes |
-| searchapi.io      | From $40/mo                          | 100 requests      | 10,000 searches/mo  | Yes |
-| serpapi.com       | From $25/mo                          | 250 searches/mo   | 1,000 searches/mo   | Yes |
-| serper.dev        | Usage-based from $0.30/1,000 queries | 2,500 queries     | Pay as you go       | Yes |
-| serply.io         | From $50/mo                          | 300 requests/mo   | 50,000 requests/mo  | Yes |
-| spaceserp.com     | From $14.99/mo                       | None found        | 1,000 searches/mo   | Yes |
-| valueserp.com     | From $50/mo                          | Free trial        | 25,000 credits/mo   | Yes |
+| Service           | Pricing                              | Free tier             | Included usage         | API |
+| ----------------- | ------------------------------------ | --------------------- | ---------------------- | --- |
+| hasdata.com       | From $49/mo                          | 1,000 requests/mo     | 200,000 requests/mo    | Yes |
+| scrapingant.com   | From $19/mo                          | 10,000 API credits/mo | 100,000 API credits/mo | Yes |
+| scrapingrobot.com | Usage-based from $0.00004/request    | 5,000 requests/mo     | Pay as you go          | Yes |
+| searchapi.io      | From $40/mo                          | 100 requests          | 10,000 searches/mo     | Yes |
+| serpapi.com       | From $25/mo                          | 250 searches/mo       | 1,000 searches/mo      | Yes |
+| serper.dev        | Usage-based from $0.30/1,000 queries | 2,500 queries         | Pay as you go          | Yes |
+| serply.io         | From $50/mo                          | 300 requests/mo       | 50,000 requests/mo     | Yes |
+| spaceserp.com     | From $14.99/mo                       | None found            | 1,000 searches/mo      | Yes |
+| valueserp.com     | From $50/mo                          | Free trial            | 25,000 credits/mo      | Yes |
 
 Pricing and free-tier details were checked against the providers' public pricing pages on 2026-03-25 and may change over time.
 
