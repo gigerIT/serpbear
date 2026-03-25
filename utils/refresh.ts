@@ -8,6 +8,7 @@ import {
 } from "./scraper";
 import parseKeywords from "./parseKeywords";
 import Keyword from "../database/models/keyword";
+import { logger } from "./logger";
 
 const buildLastUpdateError = (error: string, scraperType: string): string =>
   JSON.stringify({
@@ -32,10 +33,12 @@ const clearKeywordUpdatingState = async (
       lastUpdateError,
     });
   } catch (updateError) {
-    console.log(
-      "[ERROR] Clearing keyword updating state failed",
-      currentKeyword.keyword,
-      updateError
+    logger.error(
+      "Clearing keyword updating state failed",
+      updateError instanceof Error
+        ? updateError
+        : new Error(String(updateError)),
+      { keyword: currentKeyword.keyword }
     );
   }
 
@@ -46,10 +49,10 @@ const clearKeywordUpdatingState = async (
       await removeFromRetryQueue(currentKeyword.ID);
     }
   } catch (queueError) {
-    console.log(
-      "[ERROR] Updating retry queue failed",
-      currentKeyword.keyword,
-      queueError
+    logger.error(
+      "Updating retry queue failed",
+      queueError instanceof Error ? queueError : new Error(String(queueError)),
+      { keyword: currentKeyword.keyword }
     );
   }
 
@@ -108,7 +111,7 @@ const refreshAndUpdateKeywords = async (
     }
   } else {
     for (const keyword of rawKeyword) {
-      console.log("START SCRAPE: ", keyword.keyword);
+      logger.debug("Starting sequential scrape", { keyword: keyword.keyword });
       const keywordPlain = keyword.get({ plain: true }) as KeywordType;
       const domainSettings = domains?.find(
         (d) => d.domain === keywordPlain.domain
@@ -130,7 +133,10 @@ const refreshAndUpdateKeywords = async (
   }
 
   const end = performance.now();
-  console.log(`time taken: ${end - start}ms`);
+  logger.info("Keyword refresh completed", {
+    durationMs: Math.round(end - start),
+    keywordCount: rawKeyword.length,
+  });
   return updatedKeywords;
 };
 
@@ -229,21 +235,19 @@ export const updateKeywordPosition = async (
       });
 
       if (updatedKeyword.error) {
-        console.log(
-          `[ERROR] Updating the Keyword failed: ${
-            keyword.keyword
-          } | foundPosition=${newPos} | url="${
-            updatedKeyword.url || ""
-          }" | error="${updatedKeyword.error}" | scraper="${
-            settings.scraper_type
-          }"`
-        );
+        logger.warn("Updating keyword completed with scraper error", {
+          keyword: keyword.keyword,
+          foundPosition: newPos,
+          url: updatedKeyword.url || "",
+          error: String(updatedKeyword.error),
+          scraper: settings.scraper_type,
+        });
       } else {
-        console.log(
-          `[SUCCESS] Updating the Keyword: ${
-            keyword.keyword
-          } | foundPosition=${newPos} | url="${updatedKeyword.url || ""}"`
-        );
+        logger.info("Keyword updated", {
+          keyword: keyword.keyword,
+          foundPosition: newPos,
+          url: updatedKeyword.url || "",
+        });
       }
 
       updated = {
@@ -252,7 +256,11 @@ export const updateKeywordPosition = async (
         lastUpdateError: JSON.parse(updatedVal.lastUpdateError),
       };
     } catch (error) {
-      console.log("[ERROR] Updating SERP for Keyword", keyword.keyword, error);
+      logger.error(
+        "Updating SERP for keyword failed",
+        error instanceof Error ? error : new Error(String(error)),
+        { keyword: keyword.keyword }
+      );
     }
   }
 
@@ -285,11 +293,18 @@ const refreshParallel = async (
       continue;
     }
 
-    console.log(settledResult.reason);
+    logger.error(
+      "Parallel scrape failed",
+      settledResult.reason instanceof Error
+        ? settledResult.reason
+        : new Error(String(settledResult.reason))
+    );
     results.push(false);
   }
 
-  console.log("ALL DONE!!!");
+  logger.debug("Parallel scrape run finished", {
+    keywordCount: keywords.length,
+  });
   return results;
 };
 

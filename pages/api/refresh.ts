@@ -1,13 +1,16 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
-import db from '../../database/database';
-import Keyword from '../../database/models/keyword';
-import Domain from '../../database/models/domain';
-import refreshAndUpdateKeywords from '../../utils/refresh';
-import { getAppSettings } from './settings';
-import verifyUser from '../../utils/verifyUser';
-import parseKeywords from '../../utils/parseKeywords';
-import { scrapeKeywordFromGoogle } from '../../utils/scraper';
+import type { NextApiRequest, NextApiResponse } from "next";
+import { Op } from "sequelize";
+import db from "../../database/database";
+import Keyword from "../../database/models/keyword";
+import Domain from "../../database/models/domain";
+import refreshAndUpdateKeywords from "../../utils/refresh";
+import { getAppSettings } from "./settings";
+import verifyUser from "../../utils/verifyUser";
+import parseKeywords from "../../utils/parseKeywords";
+import { scrapeKeywordFromGoogle } from "../../utils/scraper";
+import { refreshQueue } from "../../utils/refreshQueue";
+import { logger } from "../../utils/logger";
+import { withApiLogging } from "../../utils/apiLogging";
 
 type KeywordsRefreshRes = {
   keywords?: KeywordType[];
@@ -24,96 +27,137 @@ type KeywordSearchResultRes = {
   error?: string | null;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = verifyUser(req, res);
-  if (authorized !== 'authorized') {
+  if (authorized !== "authorized") {
     return res.status(401).json({ error: authorized });
   }
-  if (req.method === 'GET') {
+  if (req.method === "GET") {
     return getKeywordSearchResults(req, res);
   }
-  if (req.method === 'POST') {
+  if (req.method === "POST") {
     return refresTheKeywords(req, res);
   }
-  return res.status(502).json({ error: 'Unrecognized Route.' });
+  return res.status(405).json({ error: "Method not allowed" });
 }
 
 const refresTheKeywords = async (
   req: NextApiRequest,
-  res: NextApiResponse<KeywordsRefreshRes>,
+  res: NextApiResponse<KeywordsRefreshRes>
 ) => {
-  if (!req.query.id && typeof req.query.id !== 'string') {
-    return res.status(400).json({ error: 'keyword ID is Required!' });
+  if (!req.query.id || typeof req.query.id !== "string") {
+    return res.status(400).json({ error: "keyword ID is Required!" });
   }
-  if (req.query.id === 'all' && !req.query.domain) {
+  if (req.query.id === "all" && !req.query.domain) {
     return res.status(400).json({
       error:
-        'When Refreshing all Keywords of a domian, the Domain name Must be provided.',
+        "When Refreshing all Keywords of a domian, the Domain name Must be provided.",
     });
   }
-  const keywordIDs = req.query.id !== 'all'
-    && (req.query.id as string).split(',').map((item) => parseInt(item, 10));
+  const keywordIDs =
+    req.query.id !== "all" &&
+    (req.query.id as string).split(",").map((item) => parseInt(item, 10));
   const { domain } = req.query || {};
-  console.log('keywordIDs: ', keywordIDs);
 
   try {
     const settings = await getAppSettings();
-    if (!settings || (settings && settings.scraper_type === 'never')) {
-      return res.status(400).json({ error: 'Scraper has not been set up yet.' });
+    if (!settings || (settings && settings.scraper_type === "never")) {
+      return res
+        .status(400)
+        .json({ error: "Scraper has not been set up yet." });
     }
-    const query = req.query.id === 'all' && domain
-      ? { domain }
-      : { ID: { [Op.in]: keywordIDs } };
+    const query =
+      req.query.id === "all" && domain
+        ? { domain }
+        : { ID: { [Op.in]: keywordIDs } };
     await Keyword.update(
-      { updating: true, lastUpdateError: 'false' },
-      { where: query },
+      { updating: true, lastUpdateError: "false" },
+      { where: query }
     );
     const keywordQueries: Keyword[] = await Keyword.findAll({ where: query });
     const allDomains: Domain[] = await Domain.findAll();
-    const domainList: DomainType[] = allDomains.map((d) => d.get({ plain: true }));
+    const domainList: DomainType[] = allDomains.map((d) =>
+      d.get({ plain: true })
+    );
+    const refreshDomains = Array.from(
+      new Set(
+        keywordQueries
+          .map((keyword) => keyword.get({ plain: true }).domain)
+          .filter(Boolean)
+      )
+    );
 
-    refreshAndUpdateKeywords(keywordQueries, settings, domainList);
-    const keywords = parseKeywords(keywordQueries.map((el) => el.get({ plain: true })));
+    const lockedDomains = refreshDomains.filter((item) =>
+      refreshQueue.isDomainLocked(item)
+    );
+    if (lockedDomains.length > 0) {
+      return res.status(409).json({
+        error: `Domains are already being refreshed: ${lockedDomains.join(
+          ", "
+        )}`,
+      });
+    }
+
+    const taskId =
+      req.query.id === "all"
+        ? `refresh-domain-${String(domain)}`
+        : `refresh-keywords-${
+            Array.isArray(keywordIDs) ? keywordIDs.join(",") : "manual"
+          }`;
+
+    refreshQueue.enqueue(
+      taskId,
+      async () => {
+        await refreshAndUpdateKeywords(keywordQueries, settings, domainList);
+      },
+      refreshDomains
+    );
+
+    const keywords = parseKeywords(
+      keywordQueries.map((el) => el.get({ plain: true }))
+    );
 
     return res.status(200).json({ keywords });
   } catch (error) {
-    console.log('ERROR refreshTheKeywords: ', error);
-    return res.status(400).json({ error: 'Error refreshing keywords!' });
+    logger.error(
+      "Refreshing keywords failed",
+      error instanceof Error ? error : new Error(String(error))
+    );
+    return res.status(400).json({ error: "Error refreshing keywords!" });
   }
 };
 
 const getKeywordSearchResults = async (
   req: NextApiRequest,
-  res: NextApiResponse<KeywordSearchResultRes>,
+  res: NextApiResponse<KeywordSearchResultRes>
 ) => {
   if (!req.query.keyword || !req.query.country || !req.query.device) {
     return res.status(400).json({
-      error: 'A Valid keyword, Country Code, and device is Required!',
+      error: "A Valid keyword, Country Code, and device is Required!",
     });
   }
   try {
     const settings = await getAppSettings();
-    if (!settings || (settings && settings.scraper_type === 'never')) {
-      return res.status(400).json({ error: 'Scraper has not been set up yet.' });
+    if (!settings || (settings && settings.scraper_type === "never")) {
+      return res
+        .status(400)
+        .json({ error: "Scraper has not been set up yet." });
     }
     const dummyKeyword: KeywordType = {
       ID: 99999999999999,
       keyword: req.query.keyword as string,
-      device: 'desktop',
+      device: "desktop",
       country: req.query.country as string,
-      domain: '',
-      lastUpdated: '',
+      domain: "",
+      lastUpdated: "",
       volume: 0,
-      added: '',
+      added: "",
       position: 111,
       sticky: false,
       history: {},
       lastResult: [],
-      url: '',
+      url: "",
       tags: [],
       updating: false,
       lastUpdateError: false,
@@ -126,13 +170,18 @@ const getKeywordSearchResults = async (
         position: scrapeResult.position !== 111 ? scrapeResult.position : 0,
         country: req.query.country as string,
       };
-      return res.status(200).json({ error: '', searchResult });
+      return res.status(200).json({ error: "", searchResult });
     }
     return res.status(400).json({
-      error: 'Error Scraping Search Results for the given keyword!',
+      error: "Error Scraping Search Results for the given keyword!",
     });
   } catch (error) {
-    console.log('ERROR refreshTheKeywords: ', error);
-    return res.status(400).json({ error: 'Error refreshing keywords!' });
+    logger.error(
+      "Fetching keyword search results failed",
+      error instanceof Error ? error : new Error(String(error))
+    );
+    return res.status(400).json({ error: "Error refreshing keywords!" });
   }
 };
+
+export default withApiLogging(handler, { name: "refresh" });

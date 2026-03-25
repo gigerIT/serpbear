@@ -10,6 +10,8 @@ const mockState = {
   refreshAndUpdateKeywords: jest.fn(),
   scrapeKeywordFromGoogle: jest.fn(),
   parseKeywords: jest.fn(),
+  refreshQueueEnqueue: jest.fn(),
+  refreshQueueIsDomainLocked: jest.fn(),
 };
 
 jest.mock("../../../database/database", () => ({
@@ -66,6 +68,28 @@ jest.mock("../../../utils/parseKeywords", () => ({
   default: (...args: any[]) => mockState.parseKeywords.apply(null, args),
 }));
 
+jest.mock("../../../utils/refreshQueue", () => ({
+  refreshQueue: {
+    enqueue: (...args: any[]) =>
+      mockState.refreshQueueEnqueue.apply(null, args),
+    isDomainLocked: (...args: any[]) =>
+      mockState.refreshQueueIsDomainLocked.apply(null, args),
+  },
+}));
+
+jest.mock("../../../utils/apiLogging", () => ({
+  withApiLogging: (handler: any) => handler,
+}));
+
+jest.mock("../../../utils/logger", () => ({
+  logger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 const handler = require("../../../pages/api/refresh").default;
 
 type MockResponse = {
@@ -106,6 +130,10 @@ describe("/api/refresh", () => {
     mockState.parseKeywords.mockImplementation(
       (keywords: Array<{ ID: number; keyword: string }>) => keywords
     );
+    mockState.refreshQueueEnqueue.mockImplementation(
+      (_taskId: string, task: () => Promise<void>) => task()
+    );
+    mockState.refreshQueueIsDomainLocked.mockReturnValue(false);
     mockState.refreshAndUpdateKeywords.mockResolvedValue([
       {
         ID: 6,
@@ -121,6 +149,7 @@ describe("/api/refresh", () => {
       get: () => ({
         ID: 6,
         keyword: "fahren mittelmeer",
+        domain: "example.com",
         updating: true,
         lastUpdateError: false,
       }),
@@ -144,8 +173,13 @@ describe("/api/refresh", () => {
       { scraper_type: "scrapingrobot" },
       [{ domain: "example.com" }]
     );
+    expect(mockState.refreshQueueEnqueue).toHaveBeenCalledWith(
+      "refresh-keywords-6",
+      expect.any(Function),
+      ["example.com"]
+    );
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       keywords: [
         {
           ID: 6,
@@ -162,6 +196,7 @@ describe("/api/refresh", () => {
       get: () => ({
         ID: 6,
         keyword: "first keyword",
+        domain: "example.com",
         updating: true,
         lastUpdateError: false,
       }),
@@ -170,6 +205,7 @@ describe("/api/refresh", () => {
       get: () => ({
         ID: 7,
         keyword: "second keyword",
+        domain: "example.com",
         updating: true,
         lastUpdateError: false,
       }),
@@ -190,7 +226,7 @@ describe("/api/refresh", () => {
       [{ domain: "example.com" }]
     );
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       keywords: [
         {
           ID: 6,
@@ -205,6 +241,35 @@ describe("/api/refresh", () => {
           lastUpdateError: false,
         },
       ],
+    });
+  });
+
+  it("returns 409 when a domain refresh is already locked", async () => {
+    mockState.refreshQueueIsDomainLocked.mockReturnValue(true);
+    const keywordModel = {
+      get: () => ({
+        ID: 6,
+        keyword: "fahren mittelmeer",
+        domain: "example.com",
+        updating: true,
+        lastUpdateError: false,
+      }),
+    };
+    mockState.keywordFindAll.mockResolvedValue([keywordModel]);
+
+    const req = {
+      method: "POST",
+      query: { id: "6" },
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.refreshQueueEnqueue).not.toHaveBeenCalled();
+    expect(mockState.refreshAndUpdateKeywords).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({
+      error: "Domains are already being refreshed: example.com",
     });
   });
 });

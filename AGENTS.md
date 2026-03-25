@@ -17,6 +17,7 @@
 - `components/`: feature UI and shared UI pieces.
 - `services/`: client-side fetch + React Query hooks. Despite the name, these are browser-facing, not backend services.
 - `utils/`: server and shared helpers for auth, scraping, Search Console, Adwords, parsing, and exports.
+- `utils/logger.ts`, `utils/apiLogging.ts`, and `utils/refreshQueue.ts`: lightweight API request logging and in-process refresh coordination helpers.
 - `scrapers/services/`: scraper adapters; registry lives in `scrapers/index.ts`.
 - `database/models/` and `database/migrations/`: Sequelize models plus forward-only schema changes.
 - `types.d.ts`: shared app-wide types; keep this aligned with API payloads and persisted JSON.
@@ -45,6 +46,7 @@
 - Convert Sequelize instances to plain objects with `.get({ plain: true })` before shaping API responses or passing records into shared parsers.
 - Sensitive values in `data/settings.json` and domain Search Console payloads are encrypted with `Cryptr` using `SECRET`. New secrets need both encryption and decryption paths.
 - Auth flows through `utils/verifyUser.ts`: the UI uses cookies, while cron and limited public endpoints use Bearer `APIKEY`. Preserve both paths when editing auth or routes.
+- Targeted API routes may be wrapped with `utils/apiLogging.ts`; preserve response contracts even when adding request IDs or logging.
 - UI styling is a mix of Tailwind utilities and `styles/globals.css`; favor existing patterns over introducing a new styling approach.
 
 ## When Changing Specific Areas
@@ -65,6 +67,7 @@
 - Reverse-proxy deployments should forward `X-Forwarded-Proto` and `X-Forwarded-Host`; Google Ads redirects use those headers for the public callback URL, and secure cookies only trust actual TLS or forwarded HTTPS.
 - `data/` is writable application state; never commit local runtime contents or build logic that assumes those files already exist.
 - Scrape failures now persist through a lock-protected, atomically written `data/failed_queue.json`; keep that file as a JSON array of positive keyword IDs if you touch retry handling.
+- Manual keyword refreshes are now coordinated by `utils/refreshQueue.ts`; avoid introducing overlapping same-domain refresh execution when touching `pages/api/refresh.ts` or cron-triggered refresh flows.
 - `ideas/v-serpbear/` is a nested workspace/reference copy, not part of the root app's lint, Jest, or TypeScript scope.
 - Google SERP HTML can arrive in multiple layouts through ScrapingRobot; when touching `utils/scraper.ts`, prefer actual web-result cards and avoid counting video/image/AI modules as organic results.
 - Release automation uses `release-please`; commit types `feat`, `fix`, `perf`, and `deps` feed the changelog. Keep `include-component-in-tag` disabled so GitHub tags stay in the existing plain `vX.Y.Z` format.
