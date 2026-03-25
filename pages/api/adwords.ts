@@ -10,7 +10,7 @@ import {
   getAdwordsKeywordIdeas,
 } from '../../utils/adwords';
 import getGoogleAdsRedirectURL, {
-  getRequestOrigin,
+  isSecureRequest,
 } from '../../utils/getGoogleAdsRedirectURL';
 import { getGoogleAdsOAuthClient } from '../../utils/googleAdsOAuth';
 
@@ -20,7 +20,7 @@ const getAdwordsOAuthStateCookieOptions = (req: NextApiRequest) => ({
   httpOnly: true,
   sameSite: 'lax' as const,
   path: '/api/adwords',
-  secure: getRequestOrigin(req).startsWith('https://'),
+  secure: isSecureRequest(req),
 });
 
 type adwordsValidateResp = {

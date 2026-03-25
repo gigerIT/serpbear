@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import Cookies from 'cookies';
-import { getRequestOrigin } from '../../utils/getGoogleAdsRedirectURL';
+import { isSecureRequest } from '../../utils/getGoogleAdsRedirectURL';
 
 type loginResponse = {
   success?: boolean;
@@ -47,7 +47,7 @@ const loginUser = async (
     cookies.set('token', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: getRequestOrigin(req).startsWith('https://'),
+      secure: isSecureRequest(req),
       path: '/',
       maxAge: sessionMaxAge,
     });

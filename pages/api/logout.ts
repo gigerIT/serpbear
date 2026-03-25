@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Cookies from 'cookies';
 import verifyUser from '../../utils/verifyUser';
-import { getRequestOrigin } from '../../utils/getGoogleAdsRedirectURL';
+import { isSecureRequest } from '../../utils/getGoogleAdsRedirectURL';
 
 type logoutResponse = {
   success?: boolean;
@@ -30,7 +30,7 @@ const logout = async (
   cookies.set('token', undefined, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: getRequestOrigin(req).startsWith('https://'),
+    secure: isSecureRequest(req),
     path: '/',
   });
   return res.status(200).json({ success: true, error: null });

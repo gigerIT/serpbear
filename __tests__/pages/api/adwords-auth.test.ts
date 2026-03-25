@@ -172,4 +172,30 @@ describe('/api/adwords/auth', () => {
     });
     expect(mockState.writeFile).not.toHaveBeenCalled();
   });
+
+  it('does not mark the OAuth state cookie secure when the app receives plain HTTP without proxy headers', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        client_id: 'client-id',
+        client_secret: 'client-secret',
+      },
+      headers: {
+        host: 'serp.example.com',
+      },
+      socket: {},
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.cookieSet).toHaveBeenCalledWith(
+      'adwords_oauth_state',
+      'oauth-state-token',
+      expect.objectContaining({
+        secure: false,
+      }),
+    );
+    expect(res.statusCode).toBe(200);
+  });
 });

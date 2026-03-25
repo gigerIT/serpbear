@@ -95,4 +95,30 @@ describe('/api/login', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ success: true, error: null });
   });
+
+  it('does not force the secure cookie flag without forwarded https headers', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        username: 'admin',
+        password: 'super-secret',
+      },
+      headers: {
+        host: 'serp.example.com',
+      },
+      socket: {},
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(mockState.cookieSet).toHaveBeenCalledWith(
+      'token',
+      'signed-token',
+      expect.objectContaining({
+        secure: false,
+      }),
+    );
+    expect(res.statusCode).toBe(200);
+  });
 });

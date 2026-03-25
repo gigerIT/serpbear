@@ -5,7 +5,7 @@ import Cookies from 'cookies';
 import Cryptr from 'cryptr';
 import verifyUser from '../../../utils/verifyUser';
 import getGoogleAdsRedirectURL, {
-  getRequestOrigin,
+  isSecureRequest,
 } from '../../../utils/getGoogleAdsRedirectURL';
 import { getGoogleAdsAuthURL } from '../../../utils/googleAdsOAuth';
 import { clearAdwordsAccessTokenCache } from '../../../utils/adwords';
@@ -16,7 +16,7 @@ const getAdwordsOAuthStateCookieOptions = (req: NextApiRequest) => ({
   httpOnly: true,
   sameSite: 'lax' as const,
   path: '/api/adwords',
-  secure: getRequestOrigin(req).startsWith('https://'),
+  secure: isSecureRequest(req),
   maxAge: 10 * 60 * 1000,
 });
 
