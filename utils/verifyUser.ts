@@ -16,6 +16,7 @@ const verifyUser = (req: NextApiRequest, res: NextApiResponse): string => {
    const allowedApiRoutes = [
       'GET:/api/keyword',
       'GET:/api/keywords',
+      'POST:/api/keywords',
       'GET:/api/domains',
       'POST:/api/refresh',
       'POST:/api/cron',
