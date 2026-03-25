@@ -32,7 +32,7 @@
 - `npm run start:all`: run the web app and cron worker together.
 - `npm run lint`, `npm run test:ci`, `npm run build`: match CI; lint now runs the ESLint CLI over the main app sources instead of `next lint`.
 - `npm test`: watch mode, not ideal for one-off verification.
-- Tests load `.env.local`; start from `.env.example` when local env is missing. Jest runs in `jest-environment-jsdom` with shared polyfills and fetch mocking from `jest.setup.js`.
+- Tests load `.env.local`; start from `.env.example` when local env is missing. Jest runs in `@happy-dom/jest-environment` with shared DOM/fetch polyfills from `jest.setup.js`, and `better-sqlite3` is mapped to `__mocks__/better-sqlite3.js` for tests.
 
 ## Project-Specific Rules
 

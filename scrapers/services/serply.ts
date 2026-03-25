@@ -26,8 +26,9 @@ const serply: ScraperSettings = {
   name: "Serply",
   website: "serply.io",
   headers: (keyword, settings) => {
-    const country = scraperCountries.includes(keyword.country.toUpperCase())
-      ? keyword.country
+    const requestedCountry = (keyword.country || "US").toUpperCase();
+    const country = scraperCountries.includes(requestedCountry)
+      ? requestedCountry
       : "US";
     const apiKey = settings.scraping_api || settings.scaping_api;
     return {
@@ -38,8 +39,9 @@ const serply: ScraperSettings = {
     };
   },
   scrapeURL: (keyword, _settings, _countries, pagination) => {
-    const country = scraperCountries.includes(keyword.country.toUpperCase())
-      ? keyword.country
+    const requestedCountry = (keyword.country || "US").toUpperCase();
+    const country = scraperCountries.includes(requestedCountry)
+      ? requestedCountry
       : "US";
     const p = pagination || { start: 0, num: 10 };
     const params = new URLSearchParams({
