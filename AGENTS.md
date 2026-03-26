@@ -75,7 +75,7 @@
 - Google SERP HTML can arrive in multiple layouts through ScrapingRobot; when touching `utils/scraper.ts`, prefer actual web-result cards and avoid counting video/image/AI modules as organic results.
 - Release automation uses `release-please`; commit types `feat`, `fix`, `perf`, and `deps` feed the changelog. Keep `include-component-in-tag` disabled so GitHub tags stay in the existing plain `vX.Y.Z` format.
 - Release PR merges to `main` do not run `.github/workflows/ci.yml`; that workflow ignores the standard release-please file set and also skips push jobs whose merge commit message includes `chore(release):`, while `.github/workflows/release.yml` performs the post-merge lint/test/build validation before publishing Docker images.
-- `.github/workflows/release.yml` now builds `linux/amd64` and `linux/arm64` Docker images in parallel as separate digest pushes, then publishes the combined multi-arch manifest after both builds finish.
+- `.github/workflows/release.yml` now builds `linux/amd64` and `linux/arm64` Docker images in parallel as separate digest pushes, using a native GitHub-hosted ARM runner for the `arm64` leg before publishing the combined multi-arch manifest.
 
 ## AGENTS.md Maintenance
 
