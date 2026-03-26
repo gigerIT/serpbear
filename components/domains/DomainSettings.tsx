@@ -24,6 +24,30 @@ type DomainSettingsError = {
   msg: string;
 };
 
+const defaultSearchConsoleSettings: DomainSearchConsole = {
+  property_type: "domain",
+  url: "",
+  client_email: "",
+  private_key: "",
+};
+
+const parseSearchConsoleSettings = (
+  raw: DomainType["search_console"]
+): DomainSearchConsole => {
+  if (!raw) {
+    return { ...defaultSearchConsoleSettings };
+  }
+
+  try {
+    return {
+      ...defaultSearchConsoleSettings,
+      ...JSON.parse(raw),
+    };
+  } catch (_error) {
+    return { ...defaultSearchConsoleSettings };
+  }
+};
+
 const DomainSettings = ({
   domain,
   closeModal,
@@ -46,16 +70,14 @@ const DomainSettings = ({
         : "never",
     notification_emails:
       domain && domain.notification_emails ? domain.notification_emails : "",
-    search_console:
-      domain && domain.search_console
-        ? JSON.parse(domain.search_console)
-        : {
-            property_type: "domain",
-            url: "",
-            client_email: "",
-            private_key: "",
-          },
-    scraper_settings: (domain && domain.scraper_settings) || null,
+    search_console: parseSearchConsoleSettings(
+      domain && domain.search_console ? domain.search_console : undefined
+    ),
+    scraper_settings: {
+      scraper_type: (domain && domain.scraper_settings?.scraper_type) || null,
+      has_api_key: domain && domain.scraper_settings?.has_api_key === true,
+      scraping_api: "",
+    },
     scrape_strategy:
       (domain && (domain.scrape_strategy as ScrapeStrategy | "" | undefined)) ||
       "",
@@ -79,17 +101,102 @@ const DomainSettings = ({
     router,
     domain && domain.domain ? domain.domain : "",
     (domainObj: DomainType) => {
-      const currentSearchConsoleSettings =
-        domainObj.search_console && JSON.parse(domainObj.search_console);
-      setDomainSettings({
-        ...domainSettings,
+      const currentSearchConsoleSettings = parseSearchConsoleSettings(
+        domainObj.search_console
+      );
+      setDomainSettings((currentSettings) => ({
+        ...currentSettings,
         search_console:
-          currentSearchConsoleSettings || domainSettings.search_console,
-        scraper_settings:
-          domainObj.scraper_settings || domainSettings.scraper_settings || null,
-      });
+          currentSearchConsoleSettings || currentSettings.search_console,
+        scraper_settings: {
+          scraper_type: domainObj.scraper_settings?.scraper_type || null,
+          has_api_key: domainObj.scraper_settings?.has_api_key === true,
+          scraping_api: currentSettings.scraper_settings?.scraping_api || "",
+        },
+      }));
     }
   );
+
+  const hasScraperOverride = Boolean(
+    domainSettings.scraper_settings?.scraper_type
+  );
+  const hasStoredScraperKey =
+    domainSettings.scraper_settings?.has_api_key === true;
+  const scraperKeyInput = domainSettings.scraper_settings?.scraping_api || "";
+
+  const buildDomainSettingsPayload = (): DomainSettings => {
+    const payload: DomainSettings = {
+      ...domainSettings,
+      search_console: domainSettings.search_console,
+      scrape_strategy: domainSettings.scrape_strategy || "",
+      scrape_pagination_limit: domainSettings.scrape_pagination_limit || 0,
+      scrape_smart_full_fallback: !!domainSettings.scrape_smart_full_fallback,
+    };
+
+    const scraperSettings = domainSettings.scraper_settings;
+
+    if (!scraperSettings || !scraperSettings.scraper_type) {
+      payload.scraper_settings = null;
+      return payload;
+    }
+
+    const nextScraperSettings: DomainScraperSettings = {
+      scraper_type: scraperSettings.scraper_type,
+    };
+    const trimmedKey = (scraperSettings.scraping_api || "").trim();
+
+    if (trimmedKey) {
+      nextScraperSettings.scraping_api = trimmedKey;
+    }
+
+    if (!trimmedKey && scraperSettings.clear_api_key) {
+      nextScraperSettings.clear_api_key = true;
+    }
+
+    payload.scraper_settings = nextScraperSettings;
+
+    return payload;
+  };
+
+  const handleScraperSelect = (updated: string[]) => {
+    const scraperType = updated[0] || null;
+
+    setDomainSettings((currentSettings) => {
+      const currentScraperSettings = currentSettings.scraper_settings || {
+        scraper_type: null,
+        has_api_key: false,
+        scraping_api: "",
+      };
+      const keepExisting = currentScraperSettings.scraper_type === scraperType;
+
+      return {
+        ...currentSettings,
+        scraper_settings: scraperType
+          ? {
+              scraper_type: scraperType,
+              scraping_api: keepExisting
+                ? currentScraperSettings.scraping_api || ""
+                : "",
+              has_api_key: keepExisting
+                ? currentScraperSettings.has_api_key === true
+                : false,
+              clear_api_key: false,
+            }
+          : null,
+      };
+    });
+  };
+
+  const handleScraperKeyChange = (value: string) => {
+    setDomainSettings((currentSettings) => ({
+      ...currentSettings,
+      scraper_settings: {
+        ...(currentSettings.scraper_settings as DomainScraperSettings),
+        scraping_api: value,
+        clear_api_key: false,
+      },
+    }));
+  };
 
   const updateDomain = () => {
     let error: DomainSettingsError | null = null;
@@ -104,11 +211,7 @@ const DomainSettings = ({
       }
     }
     if (domainSettings.scraper_settings?.scraper_type) {
-      const hasInput =
-        typeof domainSettings.scraper_settings.scraping_api === "string" &&
-        domainSettings.scraper_settings.scraping_api.trim().length > 0;
-      const hasStoredKey = domainSettings.scraper_settings.has_api_key === true;
-      if (!hasInput && !hasStoredKey) {
+      if (!scraperKeyInput.trim() && !hasStoredScraperKey) {
         error = {
           type: "scraper",
           msg: "API key is required for the selected scraper.",
@@ -122,7 +225,7 @@ const DomainSettings = ({
         setSettingsError({ type: "", msg: "" });
       }, 3000);
     } else if (domain) {
-      updateMutate({ domainSettings, domain });
+      updateMutate({ domainSettings: buildDomainSettingsPayload(), domain });
     }
   };
 
@@ -307,28 +410,7 @@ const DomainSettings = ({
                       domainSettings.scraper_settings?.scraper_type || "",
                     ]}
                     defaultLabel="Use Global Scraper"
-                    updateField={(updated: string[]) => {
-                      const scraperType = updated[0] || "";
-                      setDomainSettings({
-                        ...domainSettings,
-                        scraper_settings: scraperType
-                          ? {
-                              scraper_type: scraperType,
-                              scraping_api:
-                                scraperType ===
-                                domainSettings.scraper_settings?.scraper_type
-                                  ? domainSettings.scraper_settings
-                                      ?.scraping_api || ""
-                                  : "",
-                              has_api_key:
-                                scraperType ===
-                                domainSettings.scraper_settings?.scraper_type
-                                  ? domainSettings.scraper_settings?.has_api_key
-                                  : false,
-                            }
-                          : null,
-                      });
-                    }}
+                    updateField={handleScraperSelect}
                     multiple={false}
                     rounded={"rounded"}
                     minWidth={220}
@@ -339,43 +421,37 @@ const DomainSettings = ({
                     </small>
                   )}
                 </div>
-                {domainSettings.scraper_settings?.scraper_type && (
+                {hasScraperOverride && (
                   <div className="mb-5">
                     <SecretField
                       label="Scraper API Key Override"
-                      value={
-                        domainSettings.scraper_settings?.scraping_api || ""
-                      }
-                      onChange={(value: string) =>
-                        setDomainSettings({
-                          ...domainSettings,
-                          scraper_settings: {
-                            ...(domainSettings.scraper_settings as DomainScraperSettings),
-                            scraping_api: value,
-                            clear_api_key: false,
-                          },
-                        })
-                      }
+                      value={scraperKeyInput}
+                      onChange={handleScraperKeyChange}
                       placeholder={
-                        domainSettings.scraper_settings?.has_api_key
-                          ? "Saved API key"
+                        hasStoredScraperKey
+                          ? "API key stored (leave blank to keep existing)"
                           : "Enter API key"
                       }
                       hasError={settingsError?.type === "scraper"}
                     />
-                    {domainSettings.scraper_settings?.has_api_key && (
+                    {hasStoredScraperKey && !scraperKeyInput && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        An API key is already stored for this domain.
+                      </p>
+                    )}
+                    {hasStoredScraperKey && (
                       <button
                         className="mt-2 text-xs text-red-500 font-semibold"
                         onClick={() =>
-                          setDomainSettings({
-                            ...domainSettings,
+                          setDomainSettings((currentSettings) => ({
+                            ...currentSettings,
                             scraper_settings: {
-                              ...(domainSettings.scraper_settings as DomainScraperSettings),
+                              ...(currentSettings.scraper_settings as DomainScraperSettings),
                               scraping_api: "",
                               has_api_key: false,
                               clear_api_key: true,
                             },
-                          })
+                          }))
                         }
                       >
                         Clear saved API key

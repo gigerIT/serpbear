@@ -64,8 +64,12 @@ export const buildPersistedScraperSettings = (
   existing: PersistedDomainScraperSettings | null,
   cryptr: Cryptr
 ): PersistedDomainScraperSettings | null => {
-  if (!incoming) {
+  if (incoming === undefined) {
     return existing ?? null;
+  }
+
+  if (incoming === null) {
+    return null;
   }
 
   const nextType = isNonEmptyString(incoming.scraper_type)

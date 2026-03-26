@@ -148,4 +148,62 @@ describe("/api/domains", () => {
       },
     });
   });
+
+  it("clears per-domain scraper overrides when switching back to global", async () => {
+    const domainModel = {
+      get: jest.fn().mockImplementation((key?: string) => {
+        if (key === "scraper_settings") {
+          return JSON.stringify({
+            scraper_type: "serpapi",
+            scraping_api: "existing-key",
+          });
+        }
+
+        return {
+          ID: 1,
+          domain: "example.com",
+          slug: "example-com",
+          notification: true,
+          notification_interval: "daily",
+          notification_emails: "",
+          lastUpdated: "",
+          added: "",
+          search_console: JSON.stringify({}),
+          scraper_settings: null,
+        };
+      }),
+      set: jest.fn(),
+      save: (...args: any[]) => mockState.save.apply(null, args),
+    };
+    mockState.findOne.mockResolvedValue(domainModel);
+
+    const req = {
+      method: "PUT",
+      query: { domain: "example.com" },
+      body: {
+        notification_interval: "daily",
+        notification_emails: "",
+        search_console: {},
+        scraper_settings: null,
+        scrape_strategy: "",
+        scrape_pagination_limit: 0,
+        scrape_smart_full_fallback: false,
+      },
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    expect(domainModel.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scraper_settings: null,
+      })
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      domain: {
+        scraper_settings: null,
+      },
+    });
+  });
 });
