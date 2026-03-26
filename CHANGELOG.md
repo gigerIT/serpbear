@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.2.2](https://github.com/gigerIT/serpbear/compare/v3.2.1...v3.2.2) (2026-03-26)
+
+
+### Bug Fixes
+
+* trigger CI release ([5fc383d](https://github.com/gigerIT/serpbear/commit/5fc383da4e8b02c9e1ba4cbb3bb4257ab0743802))
+
+
+### Performance Improvements
+
+* use native arm runner for release image ([ed0fee7](https://github.com/gigerIT/serpbear/commit/ed0fee7dced866e284e4f7c65a4326dbbf9061b4))
+
 ## [3.2.1](https://github.com/gigerIT/serpbear/compare/v3.2.0...v3.2.1) (2026-03-26)
 
 
