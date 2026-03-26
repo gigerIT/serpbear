@@ -77,6 +77,8 @@ services:
       SECRET: replace-with-a-long-random-string
       APIKEY: replace-with-a-long-random-api-key
       NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+Database migrations run automatically every time the container starts, before the web app and cron worker boot.
     volumes:
       - serpbear_data:/app/data
 

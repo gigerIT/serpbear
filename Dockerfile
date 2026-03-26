@@ -34,7 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.sequelizerc ./.sequelizerc
 COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 RUN npm init -y
-RUN --mount=type=cache,target=/root/.npm npm i @googleapis/searchconsole@1.0.5 @isaacs/ttlcache@1.4.1 concurrently@7.6.0 croner@9.0.0 cryptr@6.4.0 dotenv@16.0.3 sequelize-cli@6.6.5
+RUN --mount=type=cache,target=/root/.npm npm i @googleapis/searchconsole@1.0.5 @isaacs/ttlcache@1.4.1 concurrently@7.6.0 croner@9.0.0 cryptr@6.4.0 dotenv@16.0.3 umzug@3.8.2
 
 USER nextjs
 

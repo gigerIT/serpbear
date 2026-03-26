@@ -1,3 +1,10 @@
 #!/bin/sh
-npx sequelize-cli db:migrate --env production
+set -eu
+
+mkdir -p /app/data
+
+echo "Running database migrations..."
+node /app/database/runMigrations.js
+
+echo "Starting application: $*"
 exec "$@"
