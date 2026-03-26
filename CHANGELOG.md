@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.2.0](https://github.com/gigerIT/serpbear/compare/v3.1.2...v3.2.0) (2026-03-26)
+
+
+### Features
+
+* add per-domain scraper settings and enhance API responses ([922628c](https://github.com/gigerIT/serpbear/commit/922628cc9aea80a5e0d23d0f4ec4873b1bb9f3c4))
+
+
+### Bug Fixes
+
+* harden auth and refresh safeguards ([bdd01ad](https://github.com/gigerIT/serpbear/commit/bdd01adc66a9aab75d804c02f9921fd0cad9d1de))
+* harden settings and refresh coordination ([973f023](https://github.com/gigerIT/serpbear/commit/973f023cf262f09c194b2dca7e8c0a3c059d5823))
+* persist domain scraper overrides ([85f3d63](https://github.com/gigerIT/serpbear/commit/85f3d63945d2e2938d21a21f6babe7c12ae3ab05))
+* persist scraper API key updates ([f1eaee7](https://github.com/gigerIT/serpbear/commit/f1eaee7446d27a4f145eea7c6dfd158c7c0a5cc6))
+* reuse shared sqlite connection for db migrations ([f1acc30](https://github.com/gigerIT/serpbear/commit/f1acc30d0121ffcb6c17742431b7cae0ef6419e6))
+
 ## [3.1.2](https://github.com/gigerIT/serpbear/compare/v3.1.1...v3.1.2) (2026-03-25)
 
 
