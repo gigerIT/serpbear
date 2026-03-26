@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.2.1](https://github.com/gigerIT/serpbear/compare/v3.2.0...v3.2.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* run docker migrations in standalone runtime ([75f862b](https://github.com/gigerIT/serpbear/commit/75f862bad10f5a67cd363a943698dac714bd0379))
+
+
+### Performance Improvements
+
+* parallelize release docker publishing ([16b9e43](https://github.com/gigerIT/serpbear/commit/16b9e432cf509bd5c46a3294cfab0545fc71c1d5))
+
 ## [3.2.0](https://github.com/gigerIT/serpbear/compare/v3.1.2...v3.2.0) (2026-03-26)
 
 
