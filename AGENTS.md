@@ -28,7 +28,7 @@
 
 - Use Node 22.11.0 and `npm ci`; `.nvmrc`, GitHub Actions, and the Docker image are kept aligned around that version.
 - Run `npm run db:migrate` after pulling schema changes; shipped schema changes should land through migrations, not only model updates.
-- Docker startup runs `db:migrate` from `entrypoint.sh` before the app and cron worker start; keep container startup failing fast if migrations fail.
+- Docker startup runs `db:migrate` from `entrypoint.sh` before the app and cron worker start, and bootstraps `data/failed_queue.json` for empty volumes; keep container startup failing fast if migrations fail.
 - The production Docker image is based on Next standalone output, so avoid relying on `sequelize-cli` inside the runner image; use `database/runMigrations.js` + `umzug` for container-start migration work.
 - `npm run dev`: start the Next app.
 - `npm run cron`: run the worker by itself.
