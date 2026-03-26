@@ -69,16 +69,34 @@ const readStoredSettings = async (): Promise<Partial<SettingsType> | null> => {
   }
 };
 
-const getProvidedScraperApiKey = (settings: Partial<SettingsType>): string => {
-  if (typeof settings.scraping_api === "string") {
-    return settings.scraping_api;
+const getNormalizedScraperApiKey = (
+  settings: Partial<SettingsType>,
+  previousScraperApiKey = ""
+): string => {
+  const scrapingApi =
+    typeof settings.scraping_api === "string"
+      ? settings.scraping_api.trim()
+      : "";
+  const scapingApi =
+    typeof settings.scaping_api === "string" ? settings.scaping_api.trim() : "";
+
+  if (scrapingApi && scapingApi && scrapingApi !== scapingApi) {
+    if (
+      scrapingApi === previousScraperApiKey &&
+      scapingApi !== previousScraperApiKey
+    ) {
+      return scapingApi;
+    }
+
+    if (
+      scapingApi === previousScraperApiKey &&
+      scrapingApi !== previousScraperApiKey
+    ) {
+      return scrapingApi;
+    }
   }
 
-  if (typeof settings.scaping_api === "string") {
-    return settings.scaping_api;
-  }
-
-  return "";
+  return scrapingApi || scapingApi || "";
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -124,6 +142,11 @@ const updateSettings = async (
     const normalizedSettings = trimStringProperties(settings);
     const cryptr = new Cryptr(process.env.SECRET);
     const existingSettings = (await readStoredSettings()) || {};
+    const previousScraperApiKey = existingSettings.scraping_api
+      ? cryptr.decrypt(existingSettings.scraping_api)
+      : existingSettings.scaping_api
+      ? cryptr.decrypt(existingSettings.scaping_api)
+      : "";
 
     const previousClientID = existingSettings.adwords_client_id
       ? cryptr.decrypt(existingSettings.adwords_client_id)
@@ -148,7 +171,10 @@ const updateSettings = async (
           nextClientSecret
       ) && !adwordsCredentialsUnchanged;
 
-    const scraperApiKey = getProvidedScraperApiKey(normalizedSettings);
+    const scraperApiKey = getNormalizedScraperApiKey(
+      normalizedSettings,
+      previousScraperApiKey
+    );
     const scaping_api = scraperApiKey
       ? cryptr.encrypt(scraperApiKey.trim())
       : "";

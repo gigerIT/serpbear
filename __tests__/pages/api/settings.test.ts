@@ -234,6 +234,44 @@ describe("/api/settings", () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it("prefers the changed scraper api key when legacy and canonical fields disagree", async () => {
+    mockState.readFile.mockResolvedValueOnce(
+      JSON.stringify({
+        scraping_api: "encrypted-old-scraper-key",
+      })
+    );
+    mockState.decrypt.mockImplementation((value: string) => {
+      if (value === "encrypted-old-scraper-key") {
+        return "old-scraper-key";
+      }
+      if (value === "enc-old-id") {
+        return "old-id";
+      }
+      if (value === "enc-old-secret") {
+        return "old-secret";
+      }
+      return `decrypted-${value}`;
+    });
+
+    const req = {
+      method: "PUT",
+      body: {
+        settings: {
+          scraping_api: "old-scraper-key",
+          scaping_api: "new-scraper-key",
+        },
+      },
+    } as unknown as NextApiRequest;
+    const res = createResponse();
+
+    await handler(req, res as unknown as NextApiResponse);
+
+    const writePayload = JSON.parse(mockState.atomicWriteFile.mock.calls[0][1]);
+    expect(writePayload.scaping_api).toBe("encrypted-new-scraper-key");
+    expect(writePayload.scraping_api).toBe("encrypted-new-scraper-key");
+    expect(res.statusCode).toBe(200);
+  });
+
   it("returns 400 when settings payload is missing on PUT", async () => {
     const req = {
       method: "PUT",

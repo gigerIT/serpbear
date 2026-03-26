@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Toaster } from 'react-hot-toast';
-import { useFetchSettings, useUpdateSettings } from '../../services/settings';
-import Icon from '../common/Icon';
-import NotificationSettings from './NotificationSettings';
-import ScraperSettings from './ScraperSettings';
-import useOnKey from '../../hooks/useOnKey';
-import IntegrationSettings from './IntegrationSettings';
+import React, { useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
+import { useFetchSettings, useUpdateSettings } from "../../services/settings";
+import Icon from "../common/Icon";
+import NotificationSettings from "./NotificationSettings";
+import ScraperSettings from "./ScraperSettings";
+import useOnKey from "../../hooks/useOnKey";
+import IntegrationSettings from "./IntegrationSettings";
 
 type SettingsProps = {
   closeSettings: Function;
@@ -18,38 +18,64 @@ type SettingsError = {
 };
 
 export const defaultSettings: SettingsType = {
-  scraper_type: 'none',
-  scrape_delay: 'none',
+  scraper_type: "none",
+  scraping_api: "",
+  scaping_api: "",
+  scrape_delay: "none",
   scrape_retry: false,
-  notification_interval: 'daily',
-  notification_email: '',
-  smtp_server: '',
-  smtp_port: '',
-  smtp_username: '',
-  smtp_password: '',
-  notification_email_from: '',
-  notification_email_from_name: 'SerpBear',
+  notification_interval: "daily",
+  notification_email: "",
+  smtp_server: "",
+  smtp_port: "",
+  smtp_username: "",
+  smtp_password: "",
+  notification_email_from: "",
+  notification_email_from_name: "SerpBear",
   search_console: true,
-  search_console_client_email: '',
-  search_console_private_key: '',
-  keywordsColumns: ['Best', 'History', 'Volume', 'Search Console'],
+  search_console_client_email: "",
+  search_console_private_key: "",
+  keywordsColumns: ["Best", "History", "Volume", "Search Console"],
+};
+
+const getScraperApiKey = (nextSettings: Partial<SettingsType>) => {
+  if (typeof nextSettings.scraping_api === "string") {
+    return nextSettings.scraping_api;
+  }
+
+  if (typeof nextSettings.scaping_api === "string") {
+    return nextSettings.scaping_api;
+  }
+
+  return "";
+};
+
+const normalizeScraperApiSettings = (
+  nextSettings: SettingsType
+): SettingsType => {
+  const scraperApiKey = getScraperApiKey(nextSettings);
+
+  return {
+    ...nextSettings,
+    scraping_api: scraperApiKey,
+    scaping_api: scraperApiKey,
+  };
 };
 
 const Settings = ({ closeSettings }: SettingsProps) => {
-  const [currentTab, setCurrentTab] = useState<string>('scraper');
+  const [currentTab, setCurrentTab] = useState<string>("scraper");
   const [settings, setSettings] = useState<SettingsType>(defaultSettings);
   const [settingsError, setSettingsError] = useState<SettingsError | null>(
-    null,
+    null
   );
   const { mutate: updateMutate, isLoading: isUpdating } = useUpdateSettings(
-    () => console.log(''),
+    () => console.log("")
   );
   const { data: appSettings, isLoading } = useFetchSettings();
-  useOnKey('Escape', closeSettings);
+  useOnKey("Escape", closeSettings);
 
   useEffect(() => {
     if (appSettings && appSettings.settings) {
-      setSettings(appSettings.settings);
+      setSettings(normalizeScraperApiSettings(appSettings.settings));
     }
   }, [appSettings]);
 
@@ -62,11 +88,29 @@ const Settings = ({ closeSettings }: SettingsProps) => {
   };
 
   const updateSettings = (key: string, value: string | number | boolean) => {
-    setSettings({ ...settings, [key]: value });
+    setSettings((currentSettings) => {
+      const nextSettings = {
+        ...currentSettings,
+        [key]: value,
+      } as SettingsType;
+
+      if (key === "scraping_api" || key === "scaping_api") {
+        const scraperApiKey = typeof value === "string" ? value : "";
+
+        return {
+          ...nextSettings,
+          scraping_api: scraperApiKey,
+          scaping_api: scraperApiKey,
+        };
+      }
+
+      return nextSettings;
+    });
   };
 
   const performUpdate = () => {
     let error: null | SettingsError = null;
+    const normalizedSettings = normalizeScraperApiSettings(settings);
     const {
       notification_interval,
       notification_email,
@@ -74,34 +118,34 @@ const Settings = ({ closeSettings }: SettingsProps) => {
       scraper_type,
       smtp_port,
       smtp_server,
-      scaping_api,
-    } = settings;
-    if (notification_interval !== 'never') {
-      if (!settings.notification_email) {
-        error = { type: 'no_email', msg: 'Insert a Valid Email address' };
+      scraping_api,
+    } = normalizedSettings;
+    if (notification_interval !== "never") {
+      if (!normalizedSettings.notification_email) {
+        error = { type: "no_email", msg: "Insert a Valid Email address" };
       }
       if (
-        notification_email
-        && (!smtp_port || !smtp_server || !notification_email_from)
+        notification_email &&
+        (!smtp_port || !smtp_server || !notification_email_from)
       ) {
-        let type = 'no_smtp_from';
+        let type = "no_smtp_from";
         if (!smtp_port) {
-          type = 'no_smtp_port';
+          type = "no_smtp_port";
         }
         if (!smtp_server) {
-          type = 'no_smtp_server';
+          type = "no_smtp_server";
         }
         error = {
           type,
-          msg: 'Insert SMTP Server details that will be used to send the emails.',
+          msg: "Insert SMTP Server details that will be used to send the emails.",
         };
       }
     }
 
-    if (scraper_type !== 'proxy' && scraper_type !== 'none' && !scaping_api) {
+    if (scraper_type !== "proxy" && scraper_type !== "none" && !scraping_api) {
       error = {
-        type: 'no_api_key',
-        msg: 'Insert a Valid API Key or Token for the Scraper Service.',
+        type: "no_api_key",
+        msg: "Insert a Valid API Key or Token for the Scraper Service.",
       };
     }
 
@@ -112,9 +156,12 @@ const Settings = ({ closeSettings }: SettingsProps) => {
       }, 3000);
     } else {
       // Perform Update
-      updateMutate(settings);
+      updateMutate(normalizedSettings);
       // If Scraper is updated, refresh the page.
-      if (appSettings.settings === 'none' && scraper_type !== 'none') {
+      if (
+        appSettings?.settings?.scraper_type === "none" &&
+        scraper_type !== "none"
+      ) {
         window.location.reload();
       }
     }
@@ -122,7 +169,7 @@ const Settings = ({ closeSettings }: SettingsProps) => {
 
   const tabStyle = `inline-block px-3 py-2 rounded-md  cursor-pointer text-xs lg:text-sm lg:mr-3 lg:px-4 select-none z-10
    text-gray-600 border border-b-0 relative top-[1px] rounded-b-none`;
-  const tabStyleActive = 'bg-white text-blue-600 border-slate-200';
+  const tabStyleActive = "bg-white text-blue-600 border-slate-200";
 
   return (
     <div
@@ -151,37 +198,37 @@ const Settings = ({ closeSettings }: SettingsProps) => {
           <ul>
             <li
               className={`${tabStyle} ${
-                currentTab === 'scraper'
+                currentTab === "scraper"
                   ? tabStyleActive
-                  : 'border-transparent '
+                  : "border-transparent "
               }`}
-              onClick={() => setCurrentTab('scraper')}
+              onClick={() => setCurrentTab("scraper")}
             >
               <Icon type="scraper" /> Scraper
             </li>
             <li
               className={`${tabStyle} ${
-                currentTab === 'notification'
+                currentTab === "notification"
                   ? tabStyleActive
-                  : 'border-transparent'
+                  : "border-transparent"
               }`}
-              onClick={() => setCurrentTab('notification')}
+              onClick={() => setCurrentTab("notification")}
             >
               <Icon type="email" /> Notification
             </li>
             <li
               className={`${tabStyle} ${
-                currentTab === 'integrations'
+                currentTab === "integrations"
                   ? tabStyleActive
-                  : 'border-transparent'
+                  : "border-transparent"
               }`}
-              onClick={() => setCurrentTab('integrations')}
+              onClick={() => setCurrentTab("integrations")}
             >
               <Icon type="integration" size={14} /> Integrations
             </li>
           </ul>
         </div>
-        {currentTab === 'scraper' && settings && (
+        {currentTab === "scraper" && settings && (
           <ScraperSettings
             settings={settings}
             updateSettings={updateSettings}
@@ -189,14 +236,14 @@ const Settings = ({ closeSettings }: SettingsProps) => {
           />
         )}
 
-        {currentTab === 'notification' && settings && (
+        {currentTab === "notification" && settings && (
           <NotificationSettings
             settings={settings}
             updateSettings={updateSettings}
             settingsError={settingsError}
           />
         )}
-        {currentTab === 'integrations' && settings && (
+        {currentTab === "integrations" && settings && (
           <IntegrationSettings
             settings={settings}
             updateSettings={updateSettings}
