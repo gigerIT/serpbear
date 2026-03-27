@@ -21,6 +21,7 @@
 - `scrapers/services/`: scraper adapters; registry lives in `scrapers/index.ts`.
 - `database/models/` and `database/migrations/`: Sequelize models plus forward-only schema changes.
 - `types.d.ts`: shared app-wide types; keep this aligned with API payloads and persisted JSON.
+- `UPSTREAM.md`: running log for upstream `towfiqi/serpbear` review boundaries and local adoption commits; check it before repeating upstream sync audits.
 - `styles/`: Tailwind entry plus global CSS used throughout the app.
 - `data/` (gitignored): runtime state such as `database.sqlite`, `settings.json`, and `failed_queue.json`.
 
