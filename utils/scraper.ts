@@ -232,11 +232,11 @@ const getScrapeResultPayload = (
       : "";
 
   return (
+    scraperResult ||
     responseBody.data ||
     responseBody.html ||
     responseBody.results ||
     responseBody.body ||
-    scraperResult ||
     ""
   );
 };
@@ -688,6 +688,7 @@ export const scrapeKeywordWithStrategy = async (
 
   const allScrapedResults: SearchResult[] = [];
   const pageErrors: string[] = [];
+  let totalPagesAttempted = pagesToScrape.length;
   for (const pageNum of pagesToScrape) {
     const pagination: ScraperPagination = {
       start: (pageNum - 1) * PAGE_SIZE,
@@ -736,6 +737,7 @@ export const scrapeKeywordWithStrategy = async (
           scraperObj,
           pagination
         );
+        totalPagesAttempted += 1;
         if (pageScrape.results.length > 0) {
           allScrapedResults.push(...pageScrape.results);
         } else if (pageScrape.error) {
@@ -746,6 +748,12 @@ export const scrapeKeywordWithStrategy = async (
   }
 
   const finalSerp = getSerp(keyword.domain, allScrapedResults);
+  if (finalSerp.position === 0 && pageErrors.length > totalPagesAttempted / 2) {
+    return {
+      ...errorResult,
+      error: `${pageErrors.length}/${totalPagesAttempted} scraped pages failed; unable to determine a reliable position`,
+    };
+  }
   const fullResults = buildFullResults(allScrapedResults);
 
   logScrapeSuccess("Keyword scraped", {

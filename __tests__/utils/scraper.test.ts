@@ -16,6 +16,19 @@ jest.mock("../../scrapers/index", () => [
     ) => `https://example.com/scrape?page=${pagination?.page ?? 1}`,
     serpExtractor: (content: any) => content,
   },
+  {
+    id: "payloadscraper",
+    name: "Payload Scraper",
+    website: "example.com",
+    resultObjectKey: "payload",
+    scrapeURL: (
+      _keyword: any,
+      _settings: any,
+      _countries: any,
+      pagination: any
+    ) => `https://example.com/payload?page=${pagination?.page ?? 1}`,
+    serpExtractor: (content: any) => content,
+  },
 ]);
 
 import {
@@ -255,6 +268,103 @@ describe("scraper hardening", () => {
     if (result) {
       expect(result.position).toBe(1);
       expect(result.url).toBe("https://example.com/top-result");
+    }
+  });
+
+  it("prefers the scraper-specific payload over generic response fields", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({
+        data: [
+          {
+            title: "Wrong Result",
+            url: "https://elsewhere.com",
+            position: 1,
+          },
+        ],
+        payload: [
+          {
+            title: "Expected Result",
+            url: "https://example.com",
+            position: 1,
+          },
+        ],
+      }),
+    });
+
+    const result = await scrapeKeywordFromGoogle(
+      keyword,
+      {
+        ...settings,
+        scraper_type: "payloadscraper",
+      },
+      0
+    );
+
+    expect(result).not.toBe(false);
+    if (result) {
+      expect(result.position).toBe(1);
+      expect(result.url).toBe("https://example.com");
+      expect(result.error).toBe(false);
+    }
+  });
+
+  it("returns an error when most smart-strategy pages fail and the domain is still missing", async () => {
+    jest.useFakeTimers();
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes("page=2")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: async () => ({
+            results: [
+              {
+                title: "Nearby Result",
+                url: "https://elsewhere.com/page-two",
+                position: 1,
+              },
+            ],
+          }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          request_info: {
+            success: false,
+            status_code: 503,
+            message: `Unavailable for ${url}`,
+          },
+        }),
+      });
+    });
+
+    const scrapePromise = scrapeKeywordWithStrategy(
+      {
+        ...keyword,
+        position: 25,
+      },
+      {
+        ...settings,
+        scrape_strategy: "smart",
+      }
+    );
+    await Promise.resolve();
+    await jest.runAllTimersAsync();
+    const result = await scrapePromise;
+
+    expect(result).not.toBe(false);
+    if (result) {
+      expect(result.position).toBe(25);
+      expect(result.error).toBe(
+        "3/4 scraped pages failed; unable to determine a reliable position"
+      );
     }
   });
 });
