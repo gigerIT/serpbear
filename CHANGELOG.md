@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Releases are automated with [release-please](https://github.com/googleapis/release-please) using Conventional Commits.
 
+## [3.3.0](https://github.com/gigerIT/serpbear/compare/v3.2.3...v3.3.0) (2026-03-27)
+
+
+### Features
+
+* add domain subdomain matching ([03224c2](https://github.com/gigerIT/serpbear/commit/03224c28f5d442b1591937f498ee6a952b778126))
+
+
+### Bug Fixes
+
+* harden cron runtime URL handling ([c967aef](https://github.com/gigerIT/serpbear/commit/c967aef2ba19dda15b1f16974bdf8ae6074bb4ae))
+* harden scraper result handling ([0f4574c](https://github.com/gigerIT/serpbear/commit/0f4574c0686ce13044580d4371b6b025620045b8))
+* input type to search ([8ca2302](https://github.com/gigerIT/serpbear/commit/8ca2302759414eb3365fa72a0c323d206349b123))
+
 ## [3.2.3](https://github.com/gigerIT/serpbear/compare/v3.2.2...v3.2.3) (2026-03-26)
 
 
