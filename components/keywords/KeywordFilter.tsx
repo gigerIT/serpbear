@@ -34,7 +34,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       updateColumns,
       SCcountries = [],
       tableColumns = [],
-    } = props;
+   } = props;
    const [sortOptions, showSortOptions] = useState(false);
    const [filterOptions, showFilterOptions] = useState(false);
    const [columnOptions, showColumnOptions] = useState(false);
@@ -53,28 +53,28 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       return counts;
    }, [keywords]);
 
-   const filterCountry = (cntrs:string[]) => filterKeywords({ ...filterParams, countries: cntrs });
+   const filterCountry = (cntrs: string[]) => filterKeywords({ ...filterParams, countries: cntrs });
 
-   const filterTags = (tags:string[]) => filterKeywords({ ...filterParams, tags });
+   const filterTags = (tags: string[]) => filterKeywords({ ...filterParams, tags });
 
-   const searchKeywords = (event:React.FormEvent<HTMLInputElement>) => {
+   const searchKeywords = (event: React.FormEvent<HTMLInputElement>) => {
       const filtered = filterKeywords({ ...filterParams, search: event.currentTarget.value });
       return filtered;
    };
 
    const countryOptions = useMemo(() => {
-      const optionObject:{label:string, value:string}[] = [];
+      const optionObject: { label: string, value: string }[] = [];
 
       if (!isConsole) {
          const allCountries = Array.from(keywords as KeywordType[])
-         .map((keyword) => keyword.country)
-         .reduce<string[]>((acc, country) => [...acc, country], [])
-         .filter((t) => t && t.trim() !== '');
+            .map((keyword) => keyword.country)
+            .reduce<string[]>((acc, country) => [...acc, country], [])
+            .filter((t) => t && t.trim() !== '');
          [...new Set(allCountries)].forEach((c) => {
             if (countries[c]) { optionObject.push({ label: countries[c][0], value: c }); }
          });
       } else {
-         Object.keys(countries).forEach((countryISO:string) => {
+         Object.keys(countries).forEach((countryISO: string) => {
             if ((SCcountries.includes(countryISO))) {
                optionObject.push({ label: countries[countryISO][0], value: countryISO });
             }
@@ -95,7 +95,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       { value: 'vol_desc', label: 'Highest Search Volume' },
    ];
 
-   const columnOptionChoices: {label: string, value: string, locked: boolean}[] = [
+   const columnOptionChoices: { label: string, value: string, locked: boolean }[] = [
       { value: 'Keyword', label: 'Keyword', locked: true },
       { value: 'Position', label: 'Position', locked: true },
       { value: 'URL', label: 'URL', locked: true },
@@ -116,7 +116,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       sortOptionChoices.push({ value: 'ctr_asc', label: 'Highest CTR' });
       sortOptionChoices.push({ value: 'ctr_desc', label: 'Lowest CTR' });
    }
-   const sortItemStyle = (sortType:string) => {
+   const sortItemStyle = (sortType: string) => {
       return `cursor-pointer py-2 px-3 hover:bg-[#FCFCFF] ${sortBy === sortType ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-50' : ''}`;
    };
    const deviceTabStyle = 'select-none cursor-pointer px-3 py-2 rounded-3xl mr-2';
@@ -128,30 +128,30 @@ const KeywordFilters = (props: KeywordFilterProps) => {
          <div>
             <ul className='flex text-xs'>
                <li
-                data-testid="desktop_tab"
-               className={`${deviceTabStyle} ${device === 'desktop' ? ' bg-[#F8F9FF] text-gray-700' : ''}`}
-               onClick={() => setDevice('desktop')}>
-                     <Icon type='desktop' classes='top-[3px]' size={15} />
-                     <i className='hidden not-italic lg:inline-block ml-1'>Desktop</i>
-                     <span className={`${deviceTabCountStyle}`}>{keywordCounts.desktop}</span>
+                  data-testid="desktop_tab"
+                  className={`${deviceTabStyle} ${device === 'desktop' ? ' bg-[#F8F9FF] text-gray-700' : ''}`}
+                  onClick={() => setDevice('desktop')}>
+                  <Icon type='desktop' classes='top-[3px]' size={15} />
+                  <i className='hidden not-italic lg:inline-block ml-1'>Desktop</i>
+                  <span className={`${deviceTabCountStyle}`}>{keywordCounts.desktop}</span>
                </li>
                <li
-               data-testid="mobile_tab"
-               className={`${deviceTabStyle} ${device === 'mobile' ? ' bg-[#F8F9FF] text-gray-700' : ''}`}
-               onClick={() => setDevice('mobile')}>
-                     <Icon type='mobile' />
-                     <i className='hidden not-italic lg:inline-block ml-1'>Mobile</i>
-                     <span className={`${deviceTabCountStyle}`}>{keywordCounts.mobile}</span>
+                  data-testid="mobile_tab"
+                  className={`${deviceTabStyle} ${device === 'mobile' ? ' bg-[#F8F9FF] text-gray-700' : ''}`}
+                  onClick={() => setDevice('mobile')}>
+                  <Icon type='mobile' />
+                  <i className='hidden not-italic lg:inline-block ml-1'>Mobile</i>
+                  <span className={`${deviceTabCountStyle}`}>{keywordCounts.mobile}</span>
                </li>
             </ul>
          </div>
          <div className='flex gap-5'>
             <div className=' lg:hidden'>
                <button
-               data-testid="filter_button"
-               className={`px-2 py-1 rounded ${filterOptions ? ' bg-indigo-100 text-blue-700' : ''}`}
-               title='Filter'
-               onClick={() => showFilterOptions(!filterOptions)}>
+                  data-testid="filter_button"
+                  className={`px-2 py-1 rounded ${filterOptions ? ' bg-indigo-100 text-blue-700' : ''}`}
+                  title='Filter'
+                  onClick={() => showFilterOptions(!filterOptions)}>
                   <Icon type="filter" size={18} />
                </button>
             </div>
@@ -161,7 +161,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
                      selected={filterParams.countries}
                      options={countryOptions}
                      defaultLabel='All Countries'
-                     updateField={(updated:string[]) => filterCountry(updated)}
+                     updateField={(updated: string[]) => filterCountry(updated)}
                      flags={true}
                   />
                </div>
@@ -169,9 +169,9 @@ const KeywordFilters = (props: KeywordFilterProps) => {
                   <div className={'tags_filter mb-2 lg:mb-0'}>
                      <SelectField
                         selected={filterParams.tags}
-                        options={allTags.map((tag:string) => ({ label: tag, value: tag }))}
+                        options={allTags.map((tag: string) => ({ label: tag, value: tag }))}
                         defaultLabel='All Tags'
-                        updateField={(updated:string[]) => filterTags(updated)}
+                        updateField={(updated: string[]) => filterTags(updated)}
                         emptyMsg="No Tags Found for this Domain"
                      />
                   </div>
@@ -180,74 +180,74 @@ const KeywordFilters = (props: KeywordFilterProps) => {
                   <input
                      data-testid="filter_input"
                      className={'border w-44 lg:w-36 focus:w-44 transition-all rounded-3xl p-1.5 px-4 outline-none ring-0 focus:border-indigo-200'}
-                     type="text"
+                     type="search"
                      placeholder='Filter Keywords...'
                      onChange={searchKeywords}
                      value={filterParams.search}
                   />
                </div>
             </div>
-               <div className='relative'>
-                  <button
+            <div className='relative'>
+               <button
                   data-testid="sort_button"
                   className={`px-2 py-1 rounded ${sortOptions ? ' bg-indigo-100 text-blue-700' : ''}`}
                   title='Sort'
                   onClick={() => showSortOptions(!sortOptions)}>
-                     <Icon type="sort" size={18} />
-                  </button>
-                  {sortOptions && (
-                     <ul
+                  <Icon type="sort" size={18} />
+               </button>
+               {sortOptions && (
+                  <ul
                      data-testid="sort_options"
                      className='sort_options mt-2 border absolute w-48 min-w-[0] right-0 rounded-lg
                      max-h-96 bg-white z-[9999] overflow-y-auto styled-scrollbar'>
-                        {sortOptionChoices.map((sortOption) => {
-                           return <li
-                                    key={sortOption.value}
-                                    className={sortItemStyle(sortOption.value)}
-                                    onClick={() => { updateSort(sortOption.value); showSortOptions(false); }}>
-                                       {sortOption.label}
-                                    </li>;
-                        })}
-                     </ul>
-                  )}
-               </div>
-               {!isConsole && (
-                  <div className='relative'>
+                     {sortOptionChoices.map((sortOption) => {
+                        return <li
+                           key={sortOption.value}
+                           className={sortItemStyle(sortOption.value)}
+                           onClick={() => { updateSort(sortOption.value); showSortOptions(false); }}>
+                           {sortOption.label}
+                        </li>;
+                     })}
+                  </ul>
+               )}
+            </div>
+            {!isConsole && (
+               <div className='relative'>
                   <button
-                  data-testid="columns_button"
-                  className={`px-2 py-1 rounded ${columnOptions ? ' bg-indigo-100 text-blue-700' : ''}`}
-                  title='Show/Hide Columns'
-                  onClick={() => showColumnOptions(!columnOptions)}
+                     data-testid="columns_button"
+                     className={`px-2 py-1 rounded ${columnOptions ? ' bg-indigo-100 text-blue-700' : ''}`}
+                     title='Show/Hide Columns'
+                     onClick={() => showColumnOptions(!columnOptions)}
                   >
                      <Icon type='eye-closed' size={18} />
                   </button>
                   {columnOptions && (
                      <ul
-                     data-testid="sort_options"
-                     className='sort_options mt-2 border absolute w-48 min-w-[0] right-0 rounded-lg
+                        data-testid="sort_options"
+                        className='sort_options mt-2 border absolute w-48 min-w-[0] right-0 rounded-lg
                      max-h-96 bg-white z-[9999] overflow-y-auto styled-scrollbar border-gray-200 '>
                         {columnOptionChoices.map(({ value, label, locked }) => {
                            return <li
-                                    key={value}
-                                    className={sortItemStyle(value) + (locked ? 'bg-gray-50 cursor-not-allowed pointer-events-none' : '') }
-                                    onClick={() => { if (updateColumns) { updateColumns(value); } showColumnOptions(false); }}
-                                    >
-                                       <span className={' inline-block px-[3px] border border-gray-200  rounded-[4px] w-5'}>
-                                          <Icon
-                                          title={locked ? 'Cannot be Hidden' : ''}
-                                          type={locked ? 'lock' : 'check'}
-                                          color={!tableColumns.includes(value) && !locked ? 'transparent' : '#999' }
-                                          size={12}
-                                          />
-                                        </span>
-                                       {' '}{label}
+                              key={value}
+                              className={sortItemStyle(value) + (locked ? 'bg-gray-50 cursor-not-allowed pointer-events-none' : '')}
+                              onClick={() => { if (updateColumns) { updateColumns(value); } showColumnOptions(false); }}
+                           >
+                              <span className={' inline-block px-[3px] border border-gray-200  rounded-[4px] w-5'}>
+                                 <Icon
+                                    title={locked ? 'Cannot be Hidden' : ''}
+                                    type={locked ? 'lock' : 'check'}
+                                    color={!tableColumns.includes(value) && !locked ? 'transparent' : '#999'}
+                                    size={12}
+                                 />
+                              </span>
+                              {' '}{label}
 
-                                    </li>;
+                           </li>;
                         })}
                      </ul>
                   )}
                </div>
-               )}
+            )}
          </div>
       </div>
    );
