@@ -1,70 +1,145 @@
 const Cryptr = require("cryptr");
 const { promises } = require("fs");
-const { readFile } = require("fs");
 const { Cron } = require("croner");
 require("dotenv").config({ path: "./.env.local" });
 
-const getAppSettings = async () => {
-  const defaultSettings = {
-    scraper_type: "none",
-    notification_interval: "never",
-    notification_email: "",
-    smtp_server: "",
-    smtp_port: "",
-    smtp_username: "",
-    smtp_password: "",
-  };
-  // console.log('process.env.SECRET: ', process.env.SECRET);
-  try {
-    let decryptedSettings = {};
-    const exists = await promises
-      .stat(`${process.cwd()}/data/settings.json`)
-      .then(() => true)
-      .catch(() => false);
-    if (exists) {
-      const settingsRaw = await promises.readFile(
-        `${process.cwd()}/data/settings.json`,
-        { encoding: "utf-8" }
-      );
-      const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+const dataDirectory = `${process.cwd()}/data`;
+const settingsPath = `${dataDirectory}/settings.json`;
+const failedQueuePath = `${dataDirectory}/failed_queue.json`;
 
-      try {
-        const cryptr = new Cryptr(process.env.SECRET);
-        const encryptedScraperApi =
-          settings.scraping_api || settings.scaping_api;
-        const scaping_api = encryptedScraperApi
-          ? cryptr.decrypt(encryptedScraperApi)
-          : "";
-        const smtp_password = settings.smtp_password
-          ? cryptr.decrypt(settings.smtp_password)
-          : "";
-        decryptedSettings = {
-          ...settings,
-          scraping_api: scaping_api,
-          scaping_api,
-          smtp_password,
-        };
-      } catch (error) {
-        console.log("Error Decrypting Settings API Keys!");
-      }
-    } else {
-      throw Error("Settings file don't exist.");
+const defaultSettings = {
+  scraper_type: "none",
+  notification_interval: "never",
+  notification_email: "",
+  smtp_server: "",
+  smtp_port: "",
+  smtp_username: "",
+  smtp_password: "",
+};
+
+const normalizeBaseURL = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\/+$/, "");
+
+const getInternalBaseURL = () => {
+  const serverPort = process.env.PORT || 3000;
+  return normalizeBaseURL(`http://localhost:${serverPort}`);
+};
+
+const ensureDataDirectory = async () => {
+  await promises.mkdir(dataDirectory, { recursive: true }).catch(() => {});
+};
+
+const writeJSONFile = async (filePath, value) => {
+  await ensureDataDirectory();
+  await promises
+    .writeFile(filePath, JSON.stringify(value), { encoding: "utf-8" })
+    .catch(() => {});
+};
+
+const recoverCorruptJSONFile = async (filePath, fallbackValue) => {
+  const backupPath = `${filePath}.${Date.now()}.corrupt`;
+  console.log(
+    `[WARN] Corrupt JSON detected in ${filePath}. Backing up to ${backupPath}`
+  );
+  await promises.rename(filePath, backupPath).catch(() => {});
+  await writeJSONFile(filePath, fallbackValue);
+};
+
+const readJSONFile = async (filePath, fallbackValue, options = {}) => {
+  const { recoverCorrupt = false } = options;
+
+  try {
+    const rawValue = await promises.readFile(filePath, { encoding: "utf-8" });
+    if (!rawValue) {
+      return fallbackValue;
     }
-    return decryptedSettings;
+
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      if (recoverCorrupt) {
+        await recoverCorruptJSONFile(filePath, fallbackValue);
+      }
+      return fallbackValue;
+    }
   } catch (error) {
-    // console.log('CRON ERROR: Reading Settings File. ', error);
-    await promises
-      .mkdir(`${process.cwd()}/data`, { recursive: true })
-      .catch(() => {});
-    await promises
-      .writeFile(
-        `${process.cwd()}/data/settings.json`,
-        JSON.stringify(defaultSettings),
-        { encoding: "utf-8" }
-      )
-      .catch(() => {});
+    if (error && error.code === "ENOENT") {
+      return null;
+    }
+
+    console.log(`ERROR Reading JSON File ${filePath}..`, error);
+    return fallbackValue;
+  }
+};
+
+const getAppSettings = async () => {
+  const settings = await readJSONFile(settingsPath, defaultSettings, {
+    recoverCorrupt: true,
+  });
+
+  if (settings === null) {
+    await writeJSONFile(settingsPath, defaultSettings);
     return defaultSettings;
   }
+
+  let decryptedSettings = settings;
+
+  try {
+    const cryptr = new Cryptr(process.env.SECRET);
+    const encryptedScraperApi = settings.scraping_api || settings.scaping_api;
+    const scaping_api = encryptedScraperApi
+      ? cryptr.decrypt(encryptedScraperApi)
+      : "";
+    const smtp_password = settings.smtp_password
+      ? cryptr.decrypt(settings.smtp_password)
+      : "";
+    decryptedSettings = {
+      ...settings,
+      scraping_api: scaping_api,
+      scaping_api,
+      smtp_password,
+    };
+  } catch (error) {
+    console.log("Error Decrypting Settings API Keys!");
+  }
+
+  return decryptedSettings;
+};
+
+const getFailedQueue = async () => {
+  const queue = await readJSONFile(failedQueuePath, [], {
+    recoverCorrupt: true,
+  });
+
+  if (queue === null) {
+    await writeJSONFile(failedQueuePath, []);
+    return [];
+  }
+
+  if (!Array.isArray(queue)) {
+    await writeJSONFile(failedQueuePath, []);
+    return [];
+  }
+
+  return queue.filter(
+    (keywordID) => Number.isInteger(keywordID) && keywordID > 0
+  );
+};
+
+const makeCronRequest = (endpoint) => {
+  const fetchOpts = {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.APIKEY}` },
+  };
+
+  return fetch(`${getInternalBaseURL()}${endpoint}`, fetchOpts)
+    .then((res) => res.json())
+    .catch((error) => {
+      console.log(`ERROR Making Cron Request for ${endpoint}..`);
+      console.log(error);
+    });
 };
 
 const generateCronTime = (interval) => {
@@ -101,17 +176,7 @@ const runAppCronJobs = () => {
         scrapeCronTime,
         () => {
           // console.log('### Running Keyword Position Cron Job!');
-          const fetchOpts = {
-            method: "POST",
-            headers: { Authorization: `Bearer ${process.env.APIKEY}` },
-          };
-          fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/cron`, fetchOpts)
-            .then((res) => res.json())
-            // .then((data) =>{ console.log(data)})
-            .catch((err) => {
-              console.log("ERROR Making SERP Scraper Cron Request..");
-              console.log(err);
-            });
+          makeCronRequest("/api/cron");
         },
         { scheduled: true }
       );
@@ -132,17 +197,7 @@ const runAppCronJobs = () => {
           cronTime,
           () => {
             // console.log('### Sending Notification Email...');
-            const fetchOpts = {
-              method: "POST",
-              headers: { Authorization: `Bearer ${process.env.APIKEY}` },
-            };
-            fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notify`, fetchOpts)
-              .then((res) => res.json())
-              .then((data) => console.log(data))
-              .catch((err) => {
-                console.log("ERROR Making Cron Email Notification Request..");
-                console.log(err);
-              });
+            makeCronRequest("/api/notify").then((data) => console.log(data));
           },
           { scheduled: true }
         );
@@ -154,42 +209,15 @@ const runAppCronJobs = () => {
   const failedCronTime = generateCronTime("hourly");
   new Cron(
     failedCronTime,
-    () => {
+    async () => {
       // console.log('### Retrying Failed Scrapes...');
 
-      readFile(
-        `${process.cwd()}/data/failed_queue.json`,
-        { encoding: "utf-8" },
-        (err, data) => {
-          if (data) {
-            try {
-              const keywordsToRetry = data ? JSON.parse(data) : [];
-              if (keywordsToRetry.length > 0) {
-                const fetchOpts = {
-                  method: "POST",
-                  headers: { Authorization: `Bearer ${process.env.APIKEY}` },
-                };
-                fetch(
-                  `${
-                    process.env.NEXT_PUBLIC_APP_URL
-                  }/api/refresh?id=${keywordsToRetry.join(",")}`,
-                  fetchOpts
-                )
-                  .then((res) => res.json())
-                  .then((refreshedData) => console.log(refreshedData))
-                  .catch((fetchErr) => {
-                    console.log("ERROR Making failed_queue Cron Request..");
-                    console.log(fetchErr);
-                  });
-              }
-            } catch (error) {
-              console.log("ERROR Reading Failed Scrapes Queue File..", error);
-            }
-          } else {
-            console.log("ERROR Reading Failed Scrapes Queue File..", err);
-          }
-        }
-      );
+      const keywordsToRetry = await getFailedQueue();
+      if (keywordsToRetry.length > 0) {
+        makeCronRequest(`/api/refresh?id=${keywordsToRetry.join(",")}`).then(
+          (refreshedData) => console.log(refreshedData)
+        );
+      }
     },
     { scheduled: true }
   );
@@ -203,23 +231,21 @@ const runAppCronJobs = () => {
     new Cron(
       searchConsoleCRONTime,
       () => {
-        const fetchOpts = {
-          method: "POST",
-          headers: { Authorization: `Bearer ${process.env.APIKEY}` },
-        };
-        fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/searchconsole`, fetchOpts)
-          .then((res) => res.json())
-          .then((data) => console.log(data))
-          .catch((err) => {
-            console.log(
-              "ERROR Making Google Search Console Scraper Cron Request.."
-            );
-            console.log(err);
-          });
+        makeCronRequest("/api/searchconsole").then((data) => console.log(data));
       },
       { scheduled: true }
     );
   }
 };
 
-runAppCronJobs();
+if (require.main === module) {
+  runAppCronJobs();
+}
+
+module.exports = {
+  getAppSettings,
+  getFailedQueue,
+  getInternalBaseURL,
+  makeCronRequest,
+  runAppCronJobs,
+};
