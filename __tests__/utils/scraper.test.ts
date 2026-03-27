@@ -32,6 +32,7 @@ jest.mock("../../scrapers/index", () => [
 ]);
 
 import {
+  getSerp,
   normalizeGoogleHref,
   scrapeKeywordFromGoogle,
   scrapeKeywordWithStrategy,
@@ -58,6 +59,46 @@ describe("normalizeGoogleHref", () => {
     expect(normalizeGoogleHref("/maps/place/test")).toBe(
       "https://www.google.com/maps/place/test"
     );
+  });
+});
+
+describe("getSerp", () => {
+  it("matches configured subdomains for a tracked domain", () => {
+    const serp = getSerp(
+      "example.com",
+      [
+        {
+          title: "Blog Result",
+          url: "https://blog.example.com/post",
+          position: 3,
+        },
+      ],
+      "blog"
+    );
+
+    expect(serp).toEqual({
+      position: 3,
+      url: "https://blog.example.com/post",
+    });
+  });
+
+  it("matches any subdomain when wildcard matching is enabled", () => {
+    const serp = getSerp(
+      "example.com",
+      [
+        {
+          title: "Docs Result",
+          url: "https://docs.example.com/guide",
+          position: 2,
+        },
+      ],
+      "*"
+    );
+
+    expect(serp).toEqual({
+      position: 2,
+      url: "https://docs.example.com/guide",
+    });
   });
 });
 
@@ -130,7 +171,7 @@ describe("scraper hardening", () => {
       }),
     });
 
-    const result = await scrapeKeywordFromGoogle(keyword, settings, 0);
+    const result = await scrapeKeywordFromGoogle(keyword, settings, "", 0);
 
     expect(result).not.toBe(false);
     if (result) {
@@ -169,7 +210,7 @@ describe("scraper hardening", () => {
         }),
       });
 
-    const scrapePromise = scrapeKeywordFromGoogle(keyword, settings, 1);
+    const scrapePromise = scrapeKeywordFromGoogle(keyword, settings, "", 1);
     await Promise.resolve();
     await jest.runOnlyPendingTimersAsync();
     const result = await scrapePromise;
@@ -193,7 +234,7 @@ describe("scraper hardening", () => {
       },
     });
 
-    const result = await scrapeKeywordFromGoogle(keyword, settings, 0);
+    const result = await scrapeKeywordFromGoogle(keyword, settings, "", 0);
 
     expect(result).not.toBe(false);
     if (result) {
@@ -300,6 +341,7 @@ describe("scraper hardening", () => {
         ...settings,
         scraper_type: "payloadscraper",
       },
+      "",
       0
     );
 

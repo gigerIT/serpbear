@@ -124,6 +124,7 @@ describe("/api/domains", () => {
         scrape_strategy: "",
         scrape_pagination_limit: 0,
         scrape_smart_full_fallback: false,
+        subdomain_matching: "blog,*",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();
@@ -136,6 +137,7 @@ describe("/api/domains", () => {
           scraper_type: "serpapi",
           scraping_api: "encrypted-new-key",
         }),
+        subdomain_matching: "blog,*",
       })
     );
     expect(res.statusCode).toBe(200);
@@ -188,6 +190,7 @@ describe("/api/domains", () => {
         scrape_strategy: "",
         scrape_pagination_limit: 0,
         scrape_smart_full_fallback: false,
+        subdomain_matching: "",
       },
     } as unknown as NextApiRequest;
     const res = createResponse();

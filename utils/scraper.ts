@@ -662,13 +662,18 @@ export const scrapeKeywordWithStrategy = async (
 
   // Native-pagination scrapers (serpapi, searchapi) fetch 100 results in one request
   if (scraperObj?.nativePagination) {
-    return scrapeKeywordFromGoogle(keyword, settings);
+    return scrapeKeywordFromGoogle(
+      keyword,
+      settings,
+      domainSettings?.subdomain_matching || ""
+    );
   }
 
   const { strategy, paginationLimit, smartFullFallback } = resolveStrategy(
     settings,
     domainSettings
   );
+  const subdomainMatching = domainSettings?.subdomain_matching || "";
   let pagesToScrape: number[];
 
   if (strategy === "custom") {
@@ -718,7 +723,11 @@ export const scrapeKeywordWithStrategy = async (
   }
   // Smart + full fallback: if domain not found on neighboring pages, scrape the rest
   if (strategy === "smart" && smartFullFallback) {
-    const serpCheck = getSerp(keyword.domain, allScrapedResults);
+    const serpCheck = getSerp(
+      keyword.domain,
+      allScrapedResults,
+      subdomainMatching
+    );
     if (serpCheck.position === 0) {
       const alreadyScraped = new Set(pagesToScrape);
       const remainingPages = Array.from(
@@ -747,7 +756,11 @@ export const scrapeKeywordWithStrategy = async (
     }
   }
 
-  const finalSerp = getSerp(keyword.domain, allScrapedResults);
+  const finalSerp = getSerp(
+    keyword.domain,
+    allScrapedResults,
+    subdomainMatching
+  );
   if (finalSerp.position === 0 && pageErrors.length > totalPagesAttempted / 2) {
     return {
       ...errorResult,
@@ -782,6 +795,7 @@ export const scrapeKeywordWithStrategy = async (
 export const scrapeKeywordFromGoogle = async (
   keyword: KeywordType,
   settings: SettingsType,
+  subdomainMatching: string = "",
   maxRetries: number = DEFAULT_RETRY_ATTEMPTS
 ): Promise<RefreshResult> => {
   let refreshedResults: RefreshResult = {
@@ -841,7 +855,7 @@ export const scrapeKeywordFromGoogle = async (
         const extracted = scraperObj?.serpExtractor
           ? scraperObj.serpExtractor(scrapeResult)
           : extractScrapedResult(scrapeResult, keyword.device);
-        const serp = getSerp(keyword.domain, extracted);
+        const serp = getSerp(keyword.domain, extracted, subdomainMatching);
         refreshedResults = {
           ID: keyword.ID,
           keyword: keyword.keyword,
@@ -988,7 +1002,8 @@ export const extractScrapedResult = (
  */
 export const getSerp = (
   domainURL: string,
-  result: SearchResult[]
+  result: SearchResult[],
+  subdomainMatching: string = ""
 ): SERPObject => {
   if (result.length === 0 || !domainURL) {
     return { position: 0, url: "" };
@@ -997,7 +1012,28 @@ export const getSerp = (
     domainURL.includes("https://") ? domainURL : `https://${domainURL}`
   );
   const isURL = URLToFind.pathname !== "/";
-  const stripWww = (hostname: string) => hostname.replace(/^www\./, "");
+  const stripWww = (hostname: string) =>
+    hostname.toLowerCase().replace(/^www\./, "");
+  const baseDomain = stripWww(URLToFind.hostname);
+  const allowedHostnames = new Set<string>([baseDomain]);
+  let matchAllSubdomains = false;
+
+  if (subdomainMatching) {
+    const subdomains = subdomainMatching
+      .split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+
+    subdomains.forEach((subdomain) => {
+      if (subdomain === "*") {
+        matchAllSubdomains = true;
+        return;
+      }
+
+      allowedHostnames.add(`${subdomain}.${baseDomain}`);
+    });
+  }
+
   const foundItem = result.find((item) => {
     if (!item.url) {
       return false;
@@ -1006,14 +1042,22 @@ export const getSerp = (
     if (!itemURL) {
       return false;
     }
+    const itemHost = stripWww(itemURL.hostname);
     if (
       isURL &&
-      `${stripWww(URLToFind.hostname)}${URLToFind.pathname}/` ===
-        stripWww(itemURL.hostname) + itemURL.pathname
+      `${baseDomain}${URLToFind.pathname}/` === itemHost + itemURL.pathname
     ) {
       return true;
     }
-    return stripWww(URLToFind.hostname) === stripWww(itemURL.hostname);
+
+    if (allowedHostnames.has(itemHost)) {
+      return true;
+    }
+
+    return (
+      matchAllSubdomains &&
+      (itemHost === baseDomain || itemHost.endsWith(`.${baseDomain}`))
+    );
   });
   return {
     position: foundItem ? foundItem.position : 0,

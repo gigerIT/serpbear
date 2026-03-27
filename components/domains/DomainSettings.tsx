@@ -84,6 +84,7 @@ const DomainSettings = ({
     scrape_pagination_limit: (domain && domain.scrape_pagination_limit) || 0,
     scrape_smart_full_fallback:
       (domain && domain.scrape_smart_full_fallback) || false,
+    subdomain_matching: (domain && domain.subdomain_matching) || "",
   }));
 
   const {
@@ -113,6 +114,10 @@ const DomainSettings = ({
           has_api_key: domainObj.scraper_settings?.has_api_key === true,
           scraping_api: currentSettings.scraper_settings?.scraping_api || "",
         },
+        subdomain_matching:
+          typeof domainObj.subdomain_matching === "string"
+            ? domainObj.subdomain_matching
+            : currentSettings.subdomain_matching || "",
       }));
     }
   );
@@ -131,6 +136,7 @@ const DomainSettings = ({
       scrape_strategy: domainSettings.scrape_strategy || "",
       scrape_pagination_limit: domainSettings.scrape_pagination_limit || 0,
       scrape_smart_full_fallback: !!domainSettings.scrape_smart_full_fallback,
+      subdomain_matching: domainSettings.subdomain_matching || "",
     };
 
     const scraperSettings = domainSettings.scraper_settings;
@@ -402,6 +408,19 @@ const DomainSettings = ({
             )}
             {currentTab === "scraping" && (
               <div className="mb-4">
+                <div className="mb-4">
+                  <InputField
+                    label="Subdomain Matching"
+                    onChange={(value: string) =>
+                      setDomainSettings({
+                        ...domainSettings,
+                        subdomain_matching: value,
+                      })
+                    }
+                    value={domainSettings.subdomain_matching || ""}
+                    placeholder="amp, blog, *"
+                  />
+                </div>
                 <div className="mb-5">
                   <SelectField
                     label="Scraper Override"

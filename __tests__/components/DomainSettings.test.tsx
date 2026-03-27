@@ -27,7 +27,17 @@ jest.mock("../../components/common/Modal", () => {
   return MockModal;
 });
 jest.mock("../../components/common/InputField", () => {
-  const MockInputField = () => <input />;
+  const MockInputField = ({ label, value, onChange, placeholder }: any) => (
+    <label>
+      {label}
+      <input
+        data-testid={`input-${label}`}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
   MockInputField.displayName = "MockInputField";
   return MockInputField;
 });
@@ -180,5 +190,40 @@ describe("DomainSettings", () => {
     await waitFor(() => {
       expect(screen.getByText("Clear saved API key")).toBeInTheDocument();
     });
+  });
+
+  it("includes subdomain matching in the update payload", async () => {
+    const mutate = jest.fn();
+    useFetchDomainMock.mockImplementation(() => ({
+      data: { domain: baseDomain },
+      isLoading: false,
+    }));
+    useUpdateDomainMock.mockReturnValue({
+      mutate,
+      error: null,
+      isLoading: false,
+    });
+
+    render(
+      <DomainSettings
+        domain={baseDomain}
+        closeModal={jest.fn()}
+        availableScrapers={[{ label: "SerpApi", value: "serpapi" }]}
+      />
+    );
+
+    fireEvent.click(screen.getByText("Scraping"));
+    fireEvent.change(screen.getByTestId("input-Subdomain Matching"), {
+      target: { value: "blog,*" },
+    });
+    fireEvent.click(screen.getByText("Update Settings"));
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domainSettings: expect.objectContaining({
+          subdomain_matching: "blog,*",
+        }),
+      })
+    );
   });
 });

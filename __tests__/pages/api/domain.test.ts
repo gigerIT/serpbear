@@ -69,6 +69,7 @@ describe("/api/domain", () => {
         notification_emails: "",
         lastUpdated: "",
         added: "",
+        subdomain_matching: "blog,*",
         search_console: JSON.stringify({
           client_email: "enc-email",
           private_key: "enc-key",
@@ -95,6 +96,7 @@ describe("/api/domain", () => {
           scraper_type: "serpapi",
           has_api_key: true,
         },
+        subdomain_matching: "blog,*",
       },
     });
   });

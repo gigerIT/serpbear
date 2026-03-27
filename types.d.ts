@@ -29,6 +29,7 @@ type DomainType = {
   scrape_strategy?: ScrapeStrategy | "";
   scrape_pagination_limit?: number;
   scrape_smart_full_fallback?: boolean;
+  subdomain_matching?: string;
 };
 
 type KeywordHistory = {
@@ -98,6 +99,7 @@ type DomainSettings = {
   scrape_strategy?: ScrapeStrategy | "";
   scrape_pagination_limit?: number;
   scrape_smart_full_fallback?: boolean;
+  subdomain_matching?: string;
 };
 
 type SettingsType = {
