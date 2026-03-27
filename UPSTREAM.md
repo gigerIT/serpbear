@@ -26,21 +26,11 @@ When re-running the upstream review process:
 - Local repo at review time: `gigerIT/serpbear`
 - Last processed upstream commit: `32204ee044e499590aecd0e2e244c018fb8fc8a3` (`chore(release): 3.1.0`)
 
-## Upstream Commits Already Reviewed
+## Processed Boundary Rule
 
-Treat the following upstream commits as already analyzed for this fork. Skip them in future audits unless explicitly asked to re-review them.
+For normal upstream audits, treat every upstream commit at or before `32204ee044e499590aecd0e2e244c018fb8fc8a3` as already reviewed for this fork.
 
-- `a988b13` `fix: resolves broken google ads oauth of instances behind reverse proxy`
-- `d86616a` `fix: resolves cron issue with certain port mapping config`
-- `c306fa0` `fix: prevent corrupt failed queue file to reset the app settings`
-- `77cfa2f` `fix: resolves issue that prevents refreshing all keywords when one fails`
-- `4f394c2` `fix: enhance error handling and response structure in scraper functions`
-- `eecf88a` `fix: minor ui issue`
-- `4533737` `feat: add subdomain matching functionality`
-- `d5c0ca7` `build: makes docker image lighter`
-- `c5f5adf` `build: remove unnecessary files from docker image`
-- `5c36217` `docs: adds docker compose for easier deployment`
-- `32204ee` `chore(release): 3.1.0`
+Only look at commits newer than that boundary unless the task explicitly asks for a full re-review.
 
 ## Local Adoption Result
 
