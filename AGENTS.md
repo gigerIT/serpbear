@@ -62,13 +62,15 @@
 - API routes: keep route contracts stable because both the UI hooks and cron worker call them directly. If a route should work with API-key auth, add it to `allowedApiRoutes` in `utils/verifyUser.ts`.
 - Scraper integrations: add the adapter under `scrapers/services/`, then register it in `scrapers/index.ts` with accurate metadata like `id`, `name`, `allowsCity`, and `nativePagination`.
 - Domain-level scraper overrides are stored in `domain.scraper_settings` as encrypted JSON; mask API keys in responses and decrypt them only when building effective runtime settings.
+- Domain-level subdomain matching lives in `domain.subdomain_matching` as a comma-separated list like `blog,amp` or `*`; keep the model, migration, API payloads, settings UI, and `getSerp` matching logic aligned when editing it.
 
 ## Useful Gotchas
 
 - `services/` modules often use `window.location.origin`, so they are client-only.
-- `NEXT_PUBLIC_APP_URL` must point at the running app or cron-triggered requests will fail.
+- `NEXT_PUBLIC_APP_URL` and `APP_URL` drive browser-facing links, but `cron.js` now talks to the local app over `http://localhost:${PORT || 3000}` so container port mappings do not break worker requests.
 - Reverse-proxy deployments should forward `X-Forwarded-Proto` and `X-Forwarded-Host`; Google Ads redirects use those headers for the public callback URL, and secure cookies only trust actual TLS or forwarded HTTPS.
 - `data/` is writable application state; never commit local runtime contents or build logic that assumes those files already exist.
+- `cron.js` now backs up corrupt runtime JSON files to `*.corrupt` before recreating defaults; preserve that recovery behavior if you touch settings or retry-queue bootstrapping.
 - Scrape failures now persist through a lock-protected, atomically written `data/failed_queue.json`; keep that file as a JSON array of positive keyword IDs if you touch retry handling.
 - Manual keyword refreshes are now coordinated by `utils/refreshQueue.ts`; avoid introducing overlapping same-domain refresh execution when touching `pages/api/refresh.ts` or cron-triggered refresh flows.
 - `ideas/v-serpbear/` is a nested workspace/reference copy, not part of the root app's lint, Jest, or TypeScript scope.
